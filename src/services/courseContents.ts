@@ -1,5 +1,6 @@
 import { tables } from './airtable';
 import { VideoContent } from '@/types/course';
+import { FieldSet } from 'airtable';
 
 // Função auxiliar para obter a data atual no formato YYYY-MM-DD
 const getCurrentDate = () => {
@@ -22,36 +23,55 @@ const formatReleaseDateTime = (date: string, time: string) => {
   };
 };
 
-export const getCourseContents = async (id: string): Promise<VideoContent[]> => {
+export const getCourseContents = async (courseId: string): Promise<VideoContent[]> => {
   try {
-    console.log('Buscando conteúdos do curso:', id);
+    console.log('Buscando conteúdos para o curso:', courseId); // Debug
+
     const records = await tables.course_contents.select({
-      filterByFormula: `{course_id} = '${id}'`,
+      filterByFormula: `{course_id} = '${courseId}'`,
       sort: [{ field: 'order', direction: 'asc' }]
     }).firstPage();
-    
-    console.log('Conteúdos encontrados:', records);
 
-    return records.map(record => {
-      // Se a data for a data base do projeto, retorna strings vazias
-      // para indicar que o vídeo está sempre disponível
-      const isAlwaysAvailable = record.fields.release_date === '2024-01-01' && 
-                               record.fields.release_time === '00:00';
+    console.log('Registros encontrados:', records); // Debug
 
-      return {
-        id: record.id,
-        title: record.fields.title || '',
-        youtubeUrl: record.fields.youtube_url || '',
-        releaseDate: isAlwaysAvailable ? '' : (record.fields.release_date || ''),
-        releaseTime: isAlwaysAvailable ? '' : (record.fields.release_time || ''),
-        order: record.fields.order || 0
-      };
-    });
-  } catch (error) {
+    const contents = records.map(record => ({
+      id: record.id,
+      title: record.fields.title as string,
+      youtubeUrl: record.fields.youtube_url as string,
+      releaseDate: record.fields.release_date as string,
+      releaseTime: record.fields.release_time as string,
+      order: Number(record.fields.order) // Garantir que é número
+    }));
+
+    console.log('Conteúdos formatados:', contents); // Debug
+    return contents;
+
+  } catch (error: unknown) {
+    const airtableError = error as { error?: string };
+    if (airtableError.error === 'NOT_AUTHORIZED') {
+      console.warn('Sem acesso à tabela de conteúdos:', error);
+      return [];
+    }
     console.error('Erro detalhado ao buscar conteúdos:', error);
     throw error;
   }
 };
+
+interface CourseContentFields extends FieldSet {
+  course_id: string;
+  title: string;
+  youtube_url: string;
+  release_date: string;
+  release_time: string;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CourseContentRecord {
+  id: string;
+  fields: CourseContentFields;
+}
 
 export const updateCourseContents = async (courseId: string, contents: VideoContent[]) => {
   try {
@@ -110,10 +130,20 @@ export const updateCourseContents = async (courseId: string, contents: VideoCont
     }
 
     if (toUpdate.length > 0) {
-      for (let i = 0; i < toUpdate.length; i += 10) {
-        const batch = toUpdate.slice(i, i + 10);
-        await tables.course_contents.update(batch);
-      }
+      const batch = toUpdate.map(update => ({
+        id: update.id as string,
+        fields: {
+          course_id: update.fields.course_id,
+          title: update.fields.title,
+          youtube_url: update.fields.youtube_url,
+          release_date: update.fields.release_date,
+          release_time: update.fields.release_time,
+          order: update.fields.order,
+          created_at: update.fields.created_at,
+          updated_at: update.fields.updated_at
+        } as CourseContentFields
+      }));
+      await tables.course_contents.update(batch);
     }
 
     return true;

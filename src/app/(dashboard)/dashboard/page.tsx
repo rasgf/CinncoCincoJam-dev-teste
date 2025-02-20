@@ -150,7 +150,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Professores Pendentes</p>
               <p className="text-2xl font-bold text-gray-900">{adminStats?.pendingProfessors}</p>
-              {adminStats?.pendingProfessors > 0 && (
+              {adminStats && adminStats.pendingProfessors > 0 && (
                 <Button
                   variant="text"
                   className="mt-2 text-sm"

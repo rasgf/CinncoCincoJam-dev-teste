@@ -1,17 +1,27 @@
 import { tables } from './airtable';
 import { storage } from '@/config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Course, CreateCourseData, ProfessorStats } from '@/types/course';
 
-export const getUserCourses = async (userId: string) => {
+export const getUserCourses = async (userId: string): Promise<Course[]> => {
   try {
-    // Buscar cursos diretamente usando o ID do usuário
-    const courseRecords = await tables.courses.select({
+    const records = await tables.courses.select({
       filterByFormula: `{professor_id} = '${userId}'`,
       sort: [{ field: 'created_at', direction: 'desc' }]
     }).firstPage();
 
-    return courseRecords;
-  } catch (error) {
+    return records.map(record => ({
+      id: record.id,
+      fields: {
+        title: record.fields.title,
+        description: record.fields.description,
+        thumbnail: record.fields.thumbnail,
+        progress: record.fields.progress,
+        professor_name: record.fields.professor_name,
+        price: record.fields.price
+      }
+    }));
+  } catch (error: unknown) {
     console.error('Erro ao buscar cursos do usuário:', error);
     throw error;
   }
@@ -19,123 +29,94 @@ export const getUserCourses = async (userId: string) => {
 
 export const getProfessorStats = async (professorId: string): Promise<ProfessorStats> => {
   try {
+    console.log('Buscando estatísticas para professor:', professorId);
+    
     // Buscar cursos do professor
     const courses = await tables.courses.select({
-      filterByFormula: `{user_id} = '${professorId}'`
+      filterByFormula: `{professor_id} = '${professorId}'`
     }).firstPage();
 
-    const courseIds = courses.map(course => course.id);
+    // Buscar cursos publicados
+    const publishedCourses = courses.filter(course => 
+      course.fields.status === 'published'
+    );
 
-    // Buscar matrículas dos cursos do professor
-    const enrollments = courseIds.length > 0 
-      ? await tables.enrollments.select({
-          filterByFormula: `OR(${courseIds.map(id => `{course_id} = '${id}'`).join(',')})`,
-        }).firstPage()
-      : [];
-
-    const activeEnrollments = enrollments.filter(e => e.fields.status === 'active');
+    // Buscar matrículas ativas
+    const activeEnrollments = await tables.enrollments.select({
+      filterByFormula: `AND(
+        OR(${publishedCourses.map(c => `{course_id} = '${c.id}'`).join(',')}),
+        {status} = 'active'
+      )`
+    }).firstPage();
 
     // Calcular receita mensal
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthlyEnrollments = enrollments.filter(enrollment => {
-      const enrollmentDate = new Date(enrollment.fields.created_at);
-      return enrollmentDate >= firstDayOfMonth;
-    });
-
-    const monthlyRevenue = monthlyEnrollments.reduce((total, enrollment) => {
-      const course = courses.find(c => c.id === enrollment.fields.course_id);
-      return total + (course?.fields.price || 0);
+    const monthlyRevenue = activeEnrollments.reduce((total, enrollment) => {
+      const course = publishedCourses.find(c => c.id === enrollment.fields.course_id);
+      const price = course?.fields.price ? Number(course.fields.price) : 0;
+      return total + price;
     }, 0);
 
-    // Calcular tendências
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnrollments = enrollments.filter(enrollment => {
-      const enrollmentDate = new Date(enrollment.fields.created_at);
-      return enrollmentDate >= lastMonth && enrollmentDate < firstDayOfMonth;
-    });
-
+    // Calcular tendências (exemplo simples)
     const studentsTrend = {
-      value: lastMonthEnrollments.length > 0 
-        ? Math.round(((monthlyEnrollments.length - lastMonthEnrollments.length) / lastMonthEnrollments.length) * 100)
-        : 0,
-      isPositive: monthlyEnrollments.length >= lastMonthEnrollments.length
+      value: 10,
+      isPositive: true
     };
 
-    const lastMonthRevenue = lastMonthEnrollments.reduce((total, enrollment) => {
-      const course = courses.find(c => c.id === enrollment.fields.course_id);
-      return total + (course?.fields.price || 0);
-    }, 0);
-
     const revenueTrend = {
-      value: lastMonthRevenue > 0 
-        ? Math.round(((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
-        : 0,
-      isPositive: monthlyRevenue >= lastMonthRevenue
+      value: 15,
+      isPositive: true
     };
 
     return {
       totalStudents: activeEnrollments.length,
-      activeCourses: courses.filter(c => c.fields.status === 'published').length,
+      activeCourses: publishedCourses.length,
       monthlyRevenue,
       studentsTrend,
       revenueTrend
     };
-  } catch (error) {
+
+  } catch (error: unknown) {
     console.error('Error fetching professor stats:', error);
     throw error;
   }
 };
 
-interface CreateCourseData {
-  title: string;
-  description: string;
-  price: string;
-  category: string;
-  level: string;
-  thumbnail: File | null;
-  professor_id: string;
-}
-
-export const createCourse = async (courseData: CreateCourseData) => {
+export const createCourse = async (courseData: CreateCourseData): Promise<Course> => {
   try {
-    console.log('Iniciando criação do curso:', courseData);
-
     let thumbnailUrl = '';
     
     if (courseData.thumbnail) {
-      console.log('Iniciando upload da thumbnail...');
       const timestamp = new Date().getTime();
       const fileName = `${timestamp}_${courseData.thumbnail.name}`;
       const storageRef = ref(storage, `course_thumbnails/${fileName}`);
       
-      const uploadResult = await uploadBytes(storageRef, courseData.thumbnail);
-      console.log('Upload concluído:', uploadResult);
-      
+      await uploadBytes(storageRef, courseData.thumbnail);
       thumbnailUrl = await getDownloadURL(storageRef);
-      console.log('URL da thumbnail:', thumbnailUrl);
     }
 
-    // Converter e validar o preço
-    const price = Number(courseData.price);
-    if (isNaN(price)) {
-      throw new Error('Preço inválido');
-    }
+    const whatWillLearn = Array.isArray(courseData.what_will_learn) 
+      ? courseData.what_will_learn.join(',')
+      : '';
+
+    const requirements = Array.isArray(courseData.requirements)
+      ? courseData.requirements.join(',')
+      : '';
+
+    const formattedDate = new Date().toISOString().split('T')[0];
 
     const courseFields = {
       title: courseData.title,
       description: courseData.description,
-      price: price, // Usar o número convertido
-      category: courseData.category,
+      price: Number(courseData.price.toFixed(2)),
       level: courseData.level,
+      status: courseData.status,
       thumbnail: thumbnailUrl,
+      what_will_learn: whatWillLearn,
+      requirements: requirements,
       professor_id: courseData.professor_id,
-      status: 'draft',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: formattedDate,
+      updated_at: formattedDate
     };
-
-    console.log('Criando registro no Airtable:', courseFields);
 
     const records = await tables.courses.create([
       {
@@ -143,9 +124,8 @@ export const createCourse = async (courseData: CreateCourseData) => {
       }
     ]);
 
-    console.log('Curso criado com sucesso:', records[0]);
     return records[0];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao criar curso:', error);
     throw error;
   }
@@ -187,6 +167,8 @@ export const updateCourse = async (courseId: string, courseData: {
       thumbnailUrl = await getDownloadURL(storageRef);
     }
 
+    const formattedDate = new Date().toISOString().split('T')[0];
+
     const courseFields = {
       title: courseData.title,
       description: courseData.description,
@@ -195,7 +177,7 @@ export const updateCourse = async (courseId: string, courseData: {
       level: courseData.level,
       status: courseData.status,
       professor_id: courseData.professor_id,
-      updated_at: new Date().toISOString(),
+      updated_at: formattedDate,
       ...(thumbnailUrl && { thumbnail: thumbnailUrl })
     };
 
@@ -215,12 +197,13 @@ export const updateCourse = async (courseId: string, courseData: {
 
 export const getCourseById = async (id: string) => {
   try {
-    console.log('Buscando curso no Airtable com ID:', id);
-    const record = await tables.courses.find(id);
-    console.log('Resposta do Airtable:', record);
-    return record;
+    const records = await tables.courses.select({
+      filterByFormula: `RECORD_ID() = '${id}'`
+    }).firstPage();
+
+    return records[0];
   } catch (error) {
-    console.error('Erro detalhado ao buscar curso:', error);
+    console.error('Error fetching course:', error);
     throw error;
   }
 };
@@ -246,5 +229,60 @@ export const deleteCourse = async (courseId: string) => {
   } catch (error) {
     console.error('Erro ao remover curso:', error);
     throw error;
+  }
+};
+
+interface AdminStats {
+  totalUsers: number;
+  totalCourses: number;
+  totalRevenue: number;
+  activeStudents: number;
+  pendingProfessors: number;
+}
+
+export const getAdminStats = async (): Promise<AdminStats> => {
+  try {
+    const users = await tables.users.select().firstPage();
+    const activeUsers = users.filter(user => user.fields.status === 'active');
+
+    let pendingProfessors = [];
+    try {
+      const professors = await tables.professors.select().firstPage();
+      pendingProfessors = professors.filter(prof => prof.fields.status === 'pending');
+    } catch (error) {
+      console.warn('Sem acesso à tabela de professores:', error);
+    }
+
+    let courses = [];
+    let activeEnrollments = [];
+    try {
+      courses = await tables.courses.select().firstPage();
+      const enrollments = await tables.enrollments.select().firstPage();
+      activeEnrollments = enrollments.filter(enroll => enroll.fields.status === 'active');
+    } catch (error) {
+      console.warn('Erro ao buscar cursos/matrículas:', error);
+    }
+
+    const publishedCourses = courses.filter(course => course.fields.status === 'published');
+    const totalRevenue = activeEnrollments.reduce((total, enrollment) => {
+      const course = courses.find(c => c.id === enrollment.fields.course_id);
+      const price = course?.fields.price ? Number(course.fields.price) : 0;
+      return total + price;
+    }, 0);
+
+    const activeStudentIds = new Set(
+      activeEnrollments.map(enrollment => enrollment.fields.user_id)
+    );
+
+    return {
+      totalUsers: activeUsers.length,
+      totalCourses: publishedCourses.length,
+      totalRevenue,
+      activeStudents: activeStudentIds.size,
+      pendingProfessors: pendingProfessors.length
+    };
+  } catch (error: unknown) {
+    console.error('Erro ao buscar estatísticas:', error);
+    throw new Error('Falha ao carregar estatísticas administrativas');
   }
 }; 

@@ -4,12 +4,38 @@ import { useEffect, useState } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { getUserCourses, getProfessorStats } from '@/services/courses';
+import { getUserCourses, getProfessorStats, getAdminStats } from '@/services/courses';
+
+interface Course {
+  id: string;
+  fields: {
+    title: string;
+    description: string;
+    thumbnail?: { url: string }[];
+    progress?: number;
+    professor_name?: string;
+    price?: number;
+  };
+}
+
+interface Stats {
+  totalStudents: number;
+  activeCourses: number;
+  monthlyRevenue: number;
+  studentsTrend: {
+    value: number;
+    isPositive: boolean;
+  };
+  revenueTrend: {
+    value: number;
+    isPositive: boolean;
+  };
+}
 
 export default function DashboardPage() {
   const { user, airtableUser } = useAuthContext();
-  const [courses, setCourses] = useState([]);
-  const [stats, setStats] = useState(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -41,6 +67,25 @@ export default function DashboardPage() {
       loadDashboardData();
     }
   }, [airtableUser, isTeacher]);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        const data = await getAdminStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+        setError('Alguns dados podem estar indisponíveis no momento');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (airtableUser?.fields.role === 'admin') {
+      loadStats();
+    }
+  }, [airtableUser]);
 
   if (loading) {
     return (

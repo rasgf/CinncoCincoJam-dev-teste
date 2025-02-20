@@ -6,6 +6,7 @@ import { CourseCard } from '@/components/courses/CourseCard';
 import { Button } from '@/components/common/Button';
 import { CourseModal } from '@/components/courses/CourseModal';
 import { getUserCourses, createCourse } from '@/services/courses';
+import { CourseLevel, CourseStatus } from '@/types/course';
 
 interface Course {
   id: string;
@@ -13,11 +14,25 @@ interface Course {
     title: string;
     description: string;
     price: number;
-    category: string;
     level: string;
     status: string;
     thumbnail?: string;
+    professor_id: string;
+    what_will_learn: string[];
+    requirements: string[];
   };
+}
+
+interface CreateCourseData {
+  title: string;
+  description: string;
+  price: number;
+  level: CourseLevel;
+  status: CourseStatus;
+  thumbnail?: File | null;
+  what_will_learn: string[];
+  requirements: string[];
+  professor_id: string;
 }
 
 export default function ManageCoursesPage() {
@@ -44,7 +59,7 @@ export default function ManageCoursesPage() {
     }
   };
 
-  const handleCreateCourse = async (courseData: any) => {
+  const handleCreateCourse = async (courseData: CreateCourseData) => {
     if (!airtableUser) return;
     
     try {
@@ -94,6 +109,8 @@ export default function ManageCoursesPage() {
                 price={course.fields.price}
                 level={course.fields.level}
                 status={course.fields.status}
+                what_will_learn={course.fields.what_will_learn}
+                requirements={course.fields.requirements}
               />
               <div className="absolute top-2 right-2">
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${

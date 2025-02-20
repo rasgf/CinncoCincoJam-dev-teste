@@ -9,18 +9,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { createSecondaryApp } from '@/config/firebase';
 import { TrashIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Menu } from '@headlessui/react';
-
-interface User {
-  id: string;
-  fields: {
-    uid: string;
-    email: string;
-    name: string;
-    role: string;
-    status: string;
-    created_at: string;
-  };
-}
+import { User } from '@/types/user';
 
 export default function UsersPage() {
   const { airtableUser } = useAuthContext();
@@ -38,7 +27,10 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const data = await getAllUsers();
-      setUsers(data);
+      setUsers(data.map(record => ({
+        id: record.id,
+        fields: record.fields
+      })));
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
     } finally {

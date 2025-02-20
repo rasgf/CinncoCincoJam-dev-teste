@@ -7,6 +7,10 @@ interface CourseCardProps {
   progress?: number;
   professor?: string;
   price?: number;
+  level?: string;
+  status?: string;
+  what_will_learn?: string;
+  requirements?: string;
 }
 
 export function CourseCard({ 
@@ -15,8 +19,24 @@ export function CourseCard({
   thumbnail, 
   progress, 
   professor,
-  price 
+  price,
+  level,
+  status,
+  what_will_learn,
+  requirements
 }: CourseCardProps) {
+  
+  const formatPrice = (price: number | undefined) => {
+    if (price === undefined) return '';
+    if (price === 0) return 'Grátis';
+    return `R$ ${Number(price).toFixed(2)}`;
+  };
+
+  const getArrayFromString = (value?: string): string[] => {
+    if (!value) return [];
+    return value.split(',').map(item => item.trim());
+  };
+
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="h-48 bg-gray-200 relative">
@@ -53,10 +73,21 @@ export function CourseCard({
           )}
           {price !== undefined && (
             <span className="text-sm font-medium text-gray-900">
-              {price === 0 ? 'Grátis' : `R$ ${price.toFixed(2)}`}
+              {formatPrice(price)}
             </span>
           )}
         </div>
+
+        {what_will_learn && (
+          <div>
+            <h4>O que você vai aprender:</h4>
+            <ul>
+              {getArrayFromString(what_will_learn).map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

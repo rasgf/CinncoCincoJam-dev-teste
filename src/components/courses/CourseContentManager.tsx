@@ -20,13 +20,15 @@ interface CourseContentManagerProps {
   onSave: (contents: VideoContent[]) => Promise<void>;
 }
 
-export function CourseContentManager({ courseId, contents: initialContents, onSave }: CourseContentManagerProps) {
-  const [contents, setContents] = useState<VideoContent[]>(initialContents);
+export function CourseContentManager({ courseId, contents, onSave }: CourseContentManagerProps) {
+  console.log('CourseContentManager - contents:', contents); // Debug
+
+  const [contentsState, setContents] = useState<VideoContent[]>(contents);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setContents(initialContents);
-  }, [initialContents]);
+    setContents(contents);
+  }, [contents]);
 
   const addNewContent = () => {
     const newContent: VideoContent = {
@@ -35,14 +37,14 @@ export function CourseContentManager({ courseId, contents: initialContents, onSa
       youtubeUrl: '',
       releaseDate: '',
       releaseTime: '',
-      order: contents.length + 1
+      order: contentsState.length + 1
     };
 
-    setContents([...contents, newContent]);
+    setContents([...contentsState, newContent]);
   };
 
   const updateContent = (index: number, field: keyof VideoContent, value: string) => {
-    const updatedContents = [...contents];
+    const updatedContents = [...contentsState];
     updatedContents[index] = {
       ...updatedContents[index],
       [field]: value
@@ -51,7 +53,7 @@ export function CourseContentManager({ courseId, contents: initialContents, onSa
   };
 
   const removeContent = (index: number) => {
-    const updatedContents = contents.filter((_, i) => i !== index);
+    const updatedContents = contentsState.filter((_, i) => i !== index);
     // Reordenar após remoção
     const reorderedContents = updatedContents.map((content, i) => ({
       ...content,
@@ -63,7 +65,7 @@ export function CourseContentManager({ courseId, contents: initialContents, onSa
   const handleSave = async () => {
     try {
       setSaving(true);
-      await onSave(contents);
+      await onSave(contentsState);
     } catch (error) {
       console.error('Erro ao salvar conteúdos:', error);
       alert('Erro ao salvar conteúdos. Tente novamente.');
@@ -91,7 +93,7 @@ export function CourseContentManager({ courseId, contents: initialContents, onSa
       {/* Lista de vídeos */}
       <div className="flex-1 -mr-2 pr-2">
         <div className="space-y-4">
-          {contents.map((content, index) => (
+          {contentsState.map((content, index) => (
             <div 
               key={content.id} 
               className="bg-gray-50 p-4 rounded-lg border border-gray-200"
@@ -168,7 +170,7 @@ export function CourseContentManager({ courseId, contents: initialContents, onSa
         </div>
       </div>
 
-      {contents.length > 0 && (
+      {contentsState.length > 0 && (
         <div className="flex justify-end pt-4 mt-4">
           <Button
             onClick={handleSave}

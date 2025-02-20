@@ -33,7 +33,6 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
     title: course.fields.title,
     description: course.fields.description,
     price: course.fields.price.toString(),
-    category: course.fields.category,
     level: course.fields.level,
     status: course.fields.status,
     thumbnail: null as File | null
@@ -42,22 +41,20 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
   const [error, setError] = useState('');
   const [contents, setContents] = useState<VideoContent[]>([]);
 
+  // Carregar conteúdos quando o modal abrir
   useEffect(() => {
-    loadContents();
-  }, [course.id]);
+    const loadContents = async () => {
+      try {
+        console.log('Carregando conteúdos para o curso:', course.id); // Debug
+        const data = await getCourseContents(course.id);
+        console.log('Conteúdos carregados:', data); // Debug
+        setContents(data);
+      } catch (error) {
+        console.error('Erro ao carregar conteúdos:', error);
+        setError('Erro ao carregar conteúdos do curso');
+      }
+    };
 
-  const loadContents = async () => {
-    try {
-      const data = await getCourseContents(course.id);
-      setContents(data);
-    } catch (error) {
-      console.error('Erro ao carregar conteúdos:', error);
-      alert('Erro ao carregar conteúdos do curso. Tente novamente.');
-    }
-  };
-
-  // Recarregar conteúdos quando o modal for aberto
-  useEffect(() => {
     if (isOpen) {
       loadContents();
     }
@@ -66,7 +63,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
   const handleSaveContents = async (newContents: VideoContent[]) => {
     try {
       await updateCourseContents(course.id, newContents);
-      setContents(newContents);
+      // setContents(newContents);
       alert('Conteúdo salvo com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar conteúdos:', error);

@@ -6,12 +6,33 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { getCourseById } from '@/services/courses';
 import { Button } from '@/components/common/Button';
 
-export default function CourseLandingPage() {
+interface CourseFields {
+  title: string;
+  description: string;
+  thumbnail?: string;
+  what_will_learn?: string | string[];
+  price?: number;
+  status?: string;
+}
+
+interface Course {
+  id: string;
+  fields: CourseFields;
+}
+
+export default function CoursePage() {
   const { id } = useParams();
   const router = useRouter();
   const { airtableUser } = useAuthContext();
-  const [course, setCourse] = useState<any>(null);
+  const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Função auxiliar para converter what_will_learn em array
+  const getWhatWillLearn = (items?: string | string[]): string[] => {
+    if (!items) return [];
+    if (typeof items === 'string') return items.split(',');
+    return items;
+  };
 
   useEffect(() => {
     loadCourse();
@@ -70,7 +91,7 @@ export default function CourseLandingPage() {
             <div>
               <h2 className="text-xl font-semibold mb-3">O que você vai aprender</h2>
               <ul className="space-y-2">
-                {course.fields.what_will_learn?.map((item: string, index: number) => (
+                {getWhatWillLearn(course.fields.what_will_learn).map((item, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <svg className="w-5 h-5 text-green-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />

@@ -1,52 +1,102 @@
 import { tables } from './airtable';
 import { deleteUser, signInWithEmailAndPassword } from 'firebase/auth';
+import { Record, FieldSet } from 'airtable';
 
-export const getAdminStats = async () => {
+interface AdminStats {
+  totalUsers: number;
+  totalCourses: number;
+  totalRevenue: number;
+  activeStudents: number;
+  pendingProfessors: number;
+}
+
+interface AirtableCourse {
+  id: string;
+  fields: {
+    price: number | string;
+    course_id: string;
+    // ... outros campos
+  };
+}
+
+interface AirtableEnrollment {
+  id: string;
+  fields: {
+    course_id: string;
+    status: string;
+    // ... outros campos
+  };
+}
+
+interface User {
+  id: string;
+  fields: {
+    uid: string;
+    email: string;
+    name: string;
+    role: string;
+    status: string;
+    created_at: string;
+  };
+}
+
+interface EnrollmentRecord extends Record<FieldSet> {
+  fields: {
+    status: string;
+    course_id: string;
+    user_id: string;
+  };
+}
+
+interface CourseRecord extends Record<FieldSet> {
+  fields: {
+    price: number;
+    status: string;
+  };
+}
+
+export const getAdminStats = async (): Promise<AdminStats> => {
   try {
-    // Buscar todos os usuários ativos
-    const users = await tables.users.select().firstPage();
-    const activeUsers = users.filter(user => user.fields.status === 'active');
+    // Buscar usuários ativos
+    const users = await tables.users.select({
+      filterByFormula: `{status} = 'active'`
+    }).firstPage();
+
+    // Buscar cursos publicados
+    const publishedCourses = await tables.courses.select({
+      filterByFormula: `{status} = 'published'`
+    }).firstPage();
+
+    // Buscar matrículas ativas
+    const activeEnrollments = await tables.enrollments.select({
+      filterByFormula: `{status} = 'active'`
+    }).firstPage();
 
     // Buscar professores pendentes
-    const professors = await tables.professors.select().firstPage();
-    const pendingProfessors = professors.filter(prof => prof.fields.status === 'pending');
+    const pendingProfessors = await tables.professors.select({
+      filterByFormula: `{status} = 'pending'`
+    }).firstPage();
 
-    // Buscar todos os cursos
-    const courses = await tables.courses.select().firstPage();
-    const publishedCourses = courses.filter(course => course.fields.status === 'published');
-
-    // Buscar todas as matrículas
-    const enrollments = await tables.enrollments.select().firstPage();
-    const activeEnrollments = enrollments.filter(enroll => enroll.fields.status === 'active');
-
-    // Calcular receita total (soma do preço de todas as matrículas ativas)
+    // Calcular receita total
     const totalRevenue = activeEnrollments.reduce((total, enrollment) => {
-      // Encontrar o curso correspondente à matrícula
-      const course = courses.find(c => c.id === enrollment.fields.course_id);
-      return total + (course?.fields.price || 0);
+      const course = publishedCourses.find(c => c.id === enrollment.fields.course_id);
+      const price = course?.fields.price ? Number(course.fields.price) : 0;
+      return total + price;
     }, 0);
 
-    // Contar alunos ativos (usuários com pelo menos uma matrícula ativa)
+    // Obter IDs únicos de alunos ativos
     const activeStudentIds = new Set(
       activeEnrollments.map(enrollment => enrollment.fields.user_id)
     );
 
-    console.log('Estatísticas calculadas:', {
-      totalUsers: activeUsers.length,
-      totalCourses: publishedCourses.length,
-      totalRevenue,
-      activeStudents: activeStudentIds.size,
-      pendingProfessors: pendingProfessors.length
-    });
-
     return {
-      totalUsers: activeUsers.length,
+      totalUsers: users.length,
       totalCourses: publishedCourses.length,
       totalRevenue,
       activeStudents: activeStudentIds.size,
       pendingProfessors: pendingProfessors.length
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar estatísticas:', error);
     throw new Error('Falha ao carregar estatísticas administrativas');
   }
@@ -115,13 +165,24 @@ export const rejectProfessor = async (professorId: string) => {
   }
 };
 
-export const getAllUsers = async () => {
+export const getAllUsers = async (): Promise<User[]> => {
   try {
     const records = await tables.users.select({
       sort: [{ field: 'created_at', direction: 'desc' }]
     }).firstPage();
-    return records;
-  } catch (error) {
+
+    return records.map(record => ({
+      id: record.id,
+      fields: {
+        uid: record.fields.uid as string,
+        email: record.fields.email as string,
+        name: record.fields.name as string,
+        role: (record.fields.role as string) || 'aluno',
+        status: (record.fields.status as string) || 'active',
+        created_at: record.fields.created_at as string
+      }
+    }));
+  } catch (error: unknown) {
     console.error('Error fetching users:', error);
     throw error;
   }

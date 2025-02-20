@@ -12,7 +12,7 @@ export const tables = {
   affiliates: base('Affiliates'),
   settings: base('Settings'),
   lesson_progress: base('Lesson_Progress'),
-  course_contents: base('Course Contents'),
+  course_contents: base('CourseContents')
 };
 
 // Verificar se as tabelas estão configuradas corretamente

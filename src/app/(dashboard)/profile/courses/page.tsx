@@ -8,6 +8,8 @@ import { CourseModal } from '@/components/courses/CourseModal';
 import { getUserCourses, createCourse, updateCourse, deleteCourse } from '@/services/courses';
 import { EditCourseModal } from '@/components/courses/EditCourseModal';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
+import type { CreateCourseData } from '@/types/course';
 
 interface Course {
   id: string;
@@ -30,6 +32,8 @@ export default function ManageCoursesPage() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+  const router = useRouter();
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadCourses();
@@ -49,18 +53,13 @@ export default function ManageCoursesPage() {
     }
   };
 
-  const handleCreateCourse = async (courseData: any) => {
-    if (!airtableUser) return;
-    
+  const handleCreateCourse = async (courseData: CreateCourseData) => {
     try {
-      await createCourse({
-        ...courseData,
-        professor_id: airtableUser.id
-      });
-      await loadCourses(); // Recarrega a lista após criar
-      setIsModalOpen(false);
-    } catch (error) {
+      await createCourse(courseData);
+      router.push('/dashboard');
+    } catch (error: unknown) {
       console.error('Erro ao criar curso:', error);
+      setError('Erro ao criar curso. Tente novamente.');
     }
   };
 
