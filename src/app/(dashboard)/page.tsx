@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const isTeacher = airtableUser?.fields.role === 'professor';
 
@@ -72,17 +72,30 @@ export default function DashboardPage() {
     const loadStats = async () => {
       try {
         setLoading(true);
-        const data = await getAdminStats();
-        setStats(data);
+        if (airtableUser?.fields.role === 'admin') {
+          const data = await getAdminStats();
+          setStats(data);
+        } else if (airtableUser?.fields.role === 'professor') {
+          const data = await getProfessorStats(airtableUser.id);
+          setStats(data);
+        }
       } catch (error) {
         console.error('Erro ao carregar estatísticas:', error);
         setError('Alguns dados podem estar indisponíveis no momento');
+        // Definir valores padrão para as estatísticas
+        setStats({
+          totalUsers: 0,
+          totalCourses: 0,
+          totalRevenue: 0,
+          activeStudents: 0,
+          pendingProfessors: 0
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    if (airtableUser?.fields.role === 'admin') {
+    if (airtableUser) {
       loadStats();
     }
   }, [airtableUser]);

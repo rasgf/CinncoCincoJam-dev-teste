@@ -57,45 +57,76 @@ interface CourseRecord extends Record<FieldSet> {
 
 export const getAdminStats = async (): Promise<AdminStats> => {
   try {
-    // Buscar usuários ativos
-    const users = await tables.users.select({
-      filterByFormula: `{status} = 'active'`
-    }).firstPage();
+    // Inicializar valores padrão
+    let totalUsers = 0;
+    let totalCourses = 0;
+    let totalRevenue = 0;
+    let activeStudents = 0;
+    let pendingProfessors = 0;
 
-    // Buscar cursos publicados
-    const publishedCourses = await tables.courses.select({
-      filterByFormula: `{status} = 'published'`
-    }).firstPage();
+    try {
+      // Buscar usuários ativos
+      const users = await tables.users.select({
+        filterByFormula: `{status} = 'active'`
+      }).firstPage();
+      totalUsers = users.length;
+    } catch (error) {
+      console.warn('Erro ao buscar usuários:', error);
+    }
 
-    // Buscar matrículas ativas
-    const activeEnrollments = await tables.enrollments.select({
-      filterByFormula: `{status} = 'active'`
-    }).firstPage();
+    try {
+      // Buscar cursos publicados
+      const publishedCourses = await tables.courses.select({
+        filterByFormula: `{status} = 'published'`
+      }).firstPage();
+      totalCourses = publishedCourses.length;
 
-    // Buscar professores pendentes
-    const pendingProfessors = await tables.professors.select({
-      filterByFormula: `{status} = 'pending'`
-    }).firstPage();
+      // Buscar matrículas ativas apenas se houver cursos publicados
+      if (publishedCourses.length > 0) {
+        const courseIds = publishedCourses.map(c => c.id);
+        const enrollmentsFormula = `AND(
+          OR(${courseIds.map(id => `{course_id} = '${id}'`).join(',')}),
+          {status} = 'active'
+        )`;
 
-    // Calcular receita total
-    const totalRevenue = activeEnrollments.reduce((total, enrollment) => {
-      const course = publishedCourses.find(c => c.id === enrollment.fields.course_id);
-      const price = course?.fields.price ? Number(course.fields.price) : 0;
-      return total + price;
-    }, 0);
+        const activeEnrollments = await tables.enrollments.select({
+          filterByFormula: enrollmentsFormula
+        }).firstPage();
 
-    // Obter IDs únicos de alunos ativos
-    const activeStudentIds = new Set(
-      activeEnrollments.map(enrollment => enrollment.fields.user_id)
-    );
+        // Calcular receita total
+        totalRevenue = activeEnrollments.reduce((total, enrollment) => {
+          const course = publishedCourses.find(c => c.id === enrollment.fields.course_id);
+          return total + (course?.fields.price || 0);
+        }, 0);
+
+        // Obter IDs únicos de alunos ativos
+        const activeStudentIds = new Set(
+          activeEnrollments.map(enrollment => enrollment.fields.user_id)
+        );
+        activeStudents = activeStudentIds.size;
+      }
+    } catch (error) {
+      console.warn('Erro ao buscar cursos/matrículas:', error);
+    }
+
+    try {
+      // Buscar professores pendentes
+      const professors = await tables.professors.select({
+        filterByFormula: `{status} = 'pending'`
+      }).firstPage();
+      pendingProfessors = professors.length;
+    } catch (error) {
+      console.warn('Erro ao buscar professores:', error);
+    }
 
     return {
-      totalUsers: users.length,
-      totalCourses: publishedCourses.length,
+      totalUsers,
+      totalCourses,
       totalRevenue,
-      activeStudents: activeStudentIds.size,
-      pendingProfessors: pendingProfessors.length
+      activeStudents,
+      pendingProfessors
     };
+
   } catch (error: unknown) {
     console.error('Erro ao buscar estatísticas:', error);
     throw new Error('Falha ao carregar estatísticas administrativas');

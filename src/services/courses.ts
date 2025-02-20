@@ -36,43 +36,47 @@ export const getProfessorStats = async (professorId: string): Promise<ProfessorS
       filterByFormula: `{professor_id} = '${professorId}'`
     }).firstPage();
 
+    if (courses.length === 0) {
+      return {
+        totalStudents: 0,
+        activeCourses: 0,
+        monthlyRevenue: 0,
+        studentsTrend: { value: 0, isPositive: true },
+        revenueTrend: { value: 0, isPositive: true }
+      };
+    }
+
     // Buscar cursos publicados
     const publishedCourses = courses.filter(course => 
       course.fields.status === 'published'
     );
 
-    // Buscar matrículas ativas
-    const activeEnrollments = await tables.enrollments.select({
-      filterByFormula: `AND(
-        OR(${publishedCourses.map(c => `{course_id} = '${c.id}'`).join(',')}),
+    // Buscar matrículas ativas apenas se houver cursos publicados
+    let activeEnrollments = [];
+    if (publishedCourses.length > 0) {
+      const courseIds = publishedCourses.map(c => c.id);
+      const enrollmentsFormula = `AND(
+        OR(${courseIds.map(id => `{course_id} = '${id}'`).join(',')}),
         {status} = 'active'
-      )`
-    }).firstPage();
+      )`;
+
+      activeEnrollments = await tables.enrollments.select({
+        filterByFormula: enrollmentsFormula
+      }).firstPage();
+    }
 
     // Calcular receita mensal
     const monthlyRevenue = activeEnrollments.reduce((total, enrollment) => {
       const course = publishedCourses.find(c => c.id === enrollment.fields.course_id);
-      const price = course?.fields.price ? Number(course.fields.price) : 0;
-      return total + price;
+      return total + (course?.fields.price || 0);
     }, 0);
-
-    // Calcular tendências (exemplo simples)
-    const studentsTrend = {
-      value: 10,
-      isPositive: true
-    };
-
-    const revenueTrend = {
-      value: 15,
-      isPositive: true
-    };
 
     return {
       totalStudents: activeEnrollments.length,
       activeCourses: publishedCourses.length,
       monthlyRevenue,
-      studentsTrend,
-      revenueTrend
+      studentsTrend: { value: 0, isPositive: true },
+      revenueTrend: { value: 0, isPositive: true }
     };
 
   } catch (error: unknown) {
