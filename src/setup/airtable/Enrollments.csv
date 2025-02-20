@@ -1,0 +1,14 @@
+user_id,course_id,status,payment_status,price_paid,created_at,updated_at
+Single line text,Single line text,Single select,Single select,Number,DateTime,DateTime
+Required,Required,"Required,Options: [active,cancelled,completed]","Required,Options: [pending,paid,refunded]",Required,Required,Required
+# Campos:
+# id: Fórmula RECORD_ID()
+# user_id: Single line text
+# course_id: Single line text
+# status: Single select (active,completed,cancelled)
+# created_at: Date
+# payment_id: Single line text
+# affiliate_id: Single line text 
+,recXXXXX1,recYYYYY1,active,2024-02-01T10:00:00.000Z,pay_123,,
+,recXXXXX2,recYYYYY1,active,2024-02-05T14:30:00.000Z,pay_124,,
+,recXXXXX3,recYYYYY2,active,2024-02-10T09:15:00.000Z,pay_125,recZZZZZ1 

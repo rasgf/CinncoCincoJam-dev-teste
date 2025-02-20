@@ -1,0 +1,10 @@
+Name,Type,Options
+uid,Single line text,Required
+email,Email,Required
+name,Single line text,Required
+role,Single select,"Required,Options: [admin,professor,aluno]"
+status,Single select,"Required,Options: [active,inactive]"
+bio,Long text,
+profile_image,URL,
+created_at,DateTime,Required
+updated_at,DateTime,Required 

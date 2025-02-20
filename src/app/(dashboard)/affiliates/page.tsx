@@ -1,0 +1,4 @@
+- Dashboard de afiliado
+- Links de afiliado
+- Relatório de comissões
+- Configurações de pagamento 

@@ -1,0 +1,19 @@
+Aba "Fields":
+
+| Nome do Campo   | Tipo           | Obrigatório | Opções                                    |
+|----------------|----------------|-------------|-------------------------------------------|
+| title          | Single line text| Sim         |                                           |
+| description    | Long text      | Sim         |                                           |
+| price          | Number         | Sim         | Precisão: 2                               |
+| category       | Single select  | Sim         | frontend,backend,mobile,design,marketing   |
+| level          | Single select  | Sim         | beginner,intermediate,advanced            |
+| status         | Single select  | Sim         | draft,published,archived                  |
+| thumbnail      | URL            | Não         |                                           |
+| professor_id   | Single line text| Sim         |                                           |
+| what_will_learn| Multiple select| Não         |                                           |
+| requirements   | Multiple select| Não         |                                           |
+| created_at     | DateTime       | Sim         |                                           |
+| updated_at     | DateTime       | Sim         |                                           |
+
+Aba "Data":
+[Deixar vazia para preenchimento posterior dos dados] 

@@ -1,0 +1,3 @@
+course_id,title,youtube_url,release_date,release_time,order,created_at,updated_at
+Single line text,Single line text,URL,Date,Time,Number,DateTime,DateTime
+Required,Required,Required,,,Required,Required,Required 

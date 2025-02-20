@@ -1,0 +1,12 @@
+user_id,code,commission_rate,status,bank_info,created_at,updated_at
+Single line text,Single line text,Number,Single select,Long text,DateTime,DateTime
+Required,Required,Required,"Required,Options: [active,inactive]",Required,Required,Required
+# Campos:
+# id: Fórmula RECORD_ID()
+# user_id: Single line text
+# commission_rate: Number
+# bank_info: Long text
+# status: Single select (active,inactive) 
+,recZZZZZ1,30,"Banco: NuBank
+Agência: 0001
+Conta: 98765-4",active 

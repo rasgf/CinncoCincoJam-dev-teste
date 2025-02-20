@@ -1,0 +1,18 @@
+id,title,description,price,category,level,status,thumbnail,professor_id,what_will_learn,requirements,created_at,updated_at
+# Campos:
+# id: Fórmula RECORD_ID()
+# title: Single line text
+# description: Long text
+# price: Number
+# category: Single select (frontend,backend,mobile,design,marketing)
+# level: Single select (beginner,intermediate,advanced)
+# status: Single select (draft,published,archived)
+# thumbnail: URL
+# professor_id: Single line text
+# what_will_learn: Multiple select
+# requirements: Multiple select
+# created_at: Date
+# updated_at: Date
+,Desenvolvimento Web com React,"Aprenda React do zero ao avançado, incluindo hooks, context e muito mais",297.00,frontend,intermediate,published,https://example.com/thumb1.jpg,recXXXXX1,"JavaScript básico,HTML,CSS","JavaScript básico,Computador com Node.js",2024-03-01,2024-03-01
+,Next.js na Prática,"Construa aplicações modernas com Next.js, incluindo SSR, SSG e ISR",397.00,frontend,advanced,published,https://example.com/thumb2.jpg,recXXXXX1,"React,TypeScript,API Rest","React avançado,Node.js,Git",2024-03-02,2024-03-02
+,Fundamentos de JavaScript,"Domine os fundamentos do JavaScript, incluindo ES6+ e programação assíncrona",197.00,frontend,beginner,draft,https://example.com/thumb3.jpg,recXXXXX2,"Lógica de programação,Variáveis,Funções","Computador,Navegador moderno",2024-03-03,2024-03-03
