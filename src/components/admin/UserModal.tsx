@@ -55,9 +55,9 @@ export function UserModal({ isOpen, onClose, onSave }: UserModalProps) {
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-md w-full bg-white rounded-lg shadow-xl">
+        <Dialog.Panel className="mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
           <div className="p-6">
-            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
+            <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
               Adicionar Usuário
             </Dialog.Title>
 
@@ -86,14 +86,14 @@ export function UserModal({ isOpen, onClose, onSave }: UserModalProps) {
               />
 
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Tipo de usuário
                 </label>
                 <select
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
                   required
                 >
                   <option value="aluno">Aluno</option>

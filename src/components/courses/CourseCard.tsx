@@ -38,8 +38,8 @@ export function CourseCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="h-48 bg-gray-200 relative">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700/20 overflow-hidden">
+      <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
         {thumbnail ? (
           <img
             src={thumbnail}
@@ -47,14 +47,14 @@ export function CourseCard({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-            <span className="text-gray-400">Sem imagem</span>
+          <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+            <span className="text-gray-400 dark:text-gray-500">Sem imagem</span>
           </div>
         )}
         {progress !== undefined && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-600">
             <div 
-              className="h-full bg-blue-600" 
+              className="h-full bg-blue-600 dark:bg-blue-500" 
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -62,17 +62,17 @@ export function CourseCard({
       </div>
       
       <div className="p-4">
-        <h3 className="font-semibold text-lg text-gray-900 mb-1">{title}</h3>
-        <p className="text-sm text-gray-500 mb-3 line-clamp-2">{description}</p>
+        <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-1">{title}</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{description}</p>
         
         <div className="flex items-center justify-between">
           {professor && (
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
               Prof. {professor}
             </span>
           )}
           {price !== undefined && (
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {formatPrice(price)}
             </span>
           )}

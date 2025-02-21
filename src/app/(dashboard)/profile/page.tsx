@@ -170,21 +170,21 @@ export default function ProfilePage() {
   return (
     <>
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white shadow sm:rounded-lg">
+        <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">
+            <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
               Editar Perfil
             </h3>
             
             <form onSubmit={handleSubmit} className="mt-5 space-y-6">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+                <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg">
                   {error}
                 </div>
               )}
               
               {success && (
-                <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
+                <div className="bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-200 px-4 py-3 rounded-lg">
                   {success}
                 </div>
               )}
@@ -195,7 +195,7 @@ export default function ProfilePage() {
                   onImageSelect={handleImageSelect}
                   className="mb-6"
                 />
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Clique na imagem para alterar sua foto de perfil
                 </p>
               </div>
@@ -234,10 +234,10 @@ export default function ProfilePage() {
               </div>
             </form>
 
-            <div className="mt-10 pt-6 border-t border-gray-200">
+            <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col space-y-3">
-                <h4 className="text-lg font-medium text-red-600">Zona Perigosa</h4>
-                <p className="text-sm text-gray-500">
+                <h4 className="text-lg font-medium text-red-600 dark:text-red-400">Zona Perigosa</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Uma vez deletada, sua conta não poderá ser recuperada.
                 </p>
                 <div>
@@ -246,7 +246,7 @@ export default function ProfilePage() {
                     variant="secondary"
                     onClick={handleDeleteAccount}
                     isLoading={isDeleting}
-                    className="!bg-red-50 !text-red-600 hover:!bg-red-100 w-auto"
+                    className="!bg-red-50 dark:!bg-red-900/50 !text-red-600 dark:!text-red-400 hover:!bg-red-100 dark:hover:!bg-red-900/70 w-auto"
                   >
                     Deletar minha conta
                   </Button>
