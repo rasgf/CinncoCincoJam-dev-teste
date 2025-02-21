@@ -91,6 +91,11 @@ export default function DashboardLayout({
                 </Link>
               )}
               
+              {/* Nome do usuário */}
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                {airtableUser?.fields.name}
+              </span>
+
               {/* Botão de Toggle Dark Mode */}
               <button
                 onClick={toggleDarkMode}
@@ -115,6 +120,11 @@ export default function DashboardLayout({
             {/* Menu Mobile */}
             <div className="flex items-center sm:hidden">
               <div className="flex flex-col space-y-1">
+                {/* Nome do usuário Mobile */}
+                <span className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {airtableUser?.fields.name}
+                </span>
+
                 {menuItems.map((item) => (
                   <Link
                     key={item.href}
