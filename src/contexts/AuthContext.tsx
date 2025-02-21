@@ -1,38 +1,16 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { getUserByUid } from '@/services/airtable';
+import { useAuth, AuthHookReturn } from '@/hooks/useAuth';
 
-const AuthContext = createContext<ReturnType<typeof useAuth> | undefined>(undefined);
+// Usar a tipagem do retorno do hook
+const AuthContext = createContext<AuthHookReturn | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
-  const refreshUser = async () => {
-    if (auth.user) {
-      console.log('Iniciando refresh do usuário...');
-      try {
-        console.log('Buscando dados do usuário:', auth.user.uid);
-        const airtableUserData = await getUserByUid(auth.user.uid);
-        console.log('Dados recebidos do Airtable:', airtableUserData);
-        auth.setAirtableUser(airtableUserData);
-        console.log('Dados do usuário atualizados no contexto');
-      } catch (error) {
-        console.error('Erro ao atualizar dados do usuário:', error);
-      }
-    } else {
-      console.log('Nenhum usuário autenticado para atualizar');
-    }
-  };
-
-  const value = {
-    ...auth,
-    refreshUser,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={auth}>
       {children}
     </AuthContext.Provider>
   );

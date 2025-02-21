@@ -100,14 +100,14 @@ export default function DashboardPage() {
 
   const renderAdminDashboard = () => (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Painel Administrativo</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total de Usuários</p>
-              <p className="text-2xl font-bold text-gray-900">{adminStats?.totalUsers}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total de Usuários</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.totalUsers}</p>
             </div>
             <UsersIcon className="w-8 h-8 text-blue-500" />
           </div>
@@ -116,8 +116,8 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Cursos Ativos</p>
-              <p className="text-2xl font-bold text-gray-900">{adminStats?.totalCourses}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cursos Ativos</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.totalCourses}</p>
             </div>
             <BookOpenIcon className="w-8 h-8 text-green-500" />
           </div>
@@ -126,8 +126,8 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Receita Total</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Receita Total</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 R$ {adminStats?.totalRevenue.toFixed(2)}
               </p>
             </div>
@@ -138,8 +138,8 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Alunos Ativos</p>
-              <p className="text-2xl font-bold text-gray-900">{adminStats?.activeStudents}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Alunos Ativos</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.activeStudents}</p>
             </div>
             <AcademicCapIcon className="w-8 h-8 text-purple-500" />
           </div>
@@ -148,8 +148,8 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Professores Pendentes</p>
-              <p className="text-2xl font-bold text-gray-900">{adminStats?.pendingProfessors}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Professores Pendentes</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.pendingProfessors}</p>
               {adminStats && adminStats.pendingProfessors > 0 && (
                 <Button
                   variant="text"
@@ -169,16 +169,16 @@ export default function DashboardPage() {
 
   const renderProfessorDashboard = () => (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Painel do Professor</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Painel do Professor</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total de Alunos</p>
-              <p className="text-2xl font-bold text-gray-900">{professorStats?.totalStudents}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total de Alunos</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{professorStats?.totalStudents}</p>
               <div className={`flex items-center mt-2 text-sm ${
-                professorStats?.studentsTrend.isPositive ? 'text-green-600' : 'text-red-600'
+                professorStats?.studentsTrend.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>
                 <span>{professorStats?.studentsTrend.value}% este mês</span>
               </div>
@@ -190,8 +190,8 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Cursos Ativos</p>
-              <p className="text-2xl font-bold text-gray-900">{professorStats?.activeCourses}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cursos Ativos</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{professorStats?.activeCourses}</p>
             </div>
             <BookOpenIcon className="w-8 h-8 text-green-500" />
           </div>
@@ -200,12 +200,12 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Receita Mensal</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Receita Mensal</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 R$ {professorStats?.monthlyRevenue.toFixed(2)}
               </p>
               <div className={`flex items-center mt-2 text-sm ${
-                professorStats?.revenueTrend.isPositive ? 'text-green-600' : 'text-red-600'
+                professorStats?.revenueTrend.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>
                 <span>{professorStats?.revenueTrend.value}% este mês</span>
               </div>
@@ -225,14 +225,14 @@ export default function DashboardPage() {
 
   const renderStudentDashboard = () => (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Meu Painel de Estudos</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Meu Painel de Estudos</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Cursos Matriculados</p>
-              <p className="text-2xl font-bold text-gray-900">{studentStats?.enrolledCourses}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cursos Matriculados</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{studentStats?.enrolledCourses}</p>
             </div>
             <BookOpenIcon className="w-8 h-8 text-blue-500" />
           </div>
@@ -241,8 +241,8 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Cursos Concluídos</p>
-              <p className="text-2xl font-bold text-gray-900">{studentStats?.completedCourses}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cursos Concluídos</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{studentStats?.completedCourses}</p>
             </div>
             <AcademicCapIcon className="w-8 h-8 text-green-500" />
           </div>
@@ -251,8 +251,8 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Horas Estudadas</p>
-              <p className="text-2xl font-bold text-gray-900">{studentStats?.totalHoursStudied}h</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Horas Estudadas</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{studentStats?.totalHoursStudied}h</p>
             </div>
             <ClockIcon className="w-8 h-8 text-yellow-500" />
           </div>
@@ -262,12 +262,12 @@ export default function DashboardPage() {
       {studentStats?.nextLesson && (
         <Card>
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Continuar Estudando</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Continuar Estudando</h2>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">{studentStats.nextLesson.courseTitle}</p>
-                <p className="text-sm text-gray-600">{studentStats.nextLesson.title}</p>
-                <p className="text-sm text-gray-500">Duração: {studentStats.nextLesson.duration}min</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">{studentStats.nextLesson.courseTitle}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{studentStats.nextLesson.title}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Duração: {studentStats.nextLesson.duration}min</p>
               </div>
               <Button>Continuar</Button>
             </div>

@@ -11,6 +11,8 @@ import { deleteUser as deleteFirebaseUser } from 'firebase/auth';
 import { ReauthModal } from '@/components/auth/ReauthModal';
 import { storage } from '@/config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { UserIcon, EnvelopeIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
+import { updateProfile } from '@/services/users';
 
 const getRoleDisplay = (role: string) => {
   switch (role) {
@@ -33,28 +35,29 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: ''
+    role: '',
+    bio: '',
+    specialties: [] as string[],
+    social_media: ''
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReauthModalOpen, setIsReauthModalOpen] = useState(false);
+  const isTeacher = airtableUser?.fields.role === 'professor';
 
   useEffect(() => {
     if (airtableUser) {
       setFormData({
         name: airtableUser.fields.name || '',
         email: airtableUser.fields.email || '',
-        role: airtableUser.fields.role || ''
+        role: airtableUser.fields.role || '',
+        bio: airtableUser.fields.bio || '',
+        specialties: airtableUser.fields.specialties || [],
+        social_media: airtableUser.fields.social_media || ''
       });
     }
   }, [airtableUser]);
-
-  useEffect(() => {
-    // Redireciona para a página principal do perfil
-    router.push('/profile');
-  }, [router]);
 
   const handleImageSelect = (file: File) => {
     setSelectedImage(file);
@@ -67,9 +70,7 @@ export default function ProfilePage() {
     
     try {
       const snapshot = await uploadBytes(storageRef, file);
-      console.log('Upload realizado com sucesso:', snapshot);
       const downloadURL = await getDownloadURL(storageRef);
-      console.log('URL da imagem:', downloadURL);
       return downloadURL;
     } catch (error) {
       console.error('Erro durante o upload:', error);
@@ -79,57 +80,55 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Iniciando atualização do perfil...');
     setError('');
     setSuccess('');
     setIsLoading(true);
 
     try {
       let imageUrl = airtableUser?.fields.profile_image;
-      console.log('Imagem atual:', imageUrl);
 
       if (selectedImage) {
-        console.log('Iniciando upload da nova imagem...');
         try {
           imageUrl = await uploadImage(selectedImage);
-          console.log('Nova imagem uploaded:', imageUrl);
         } catch (uploadError) {
-          console.error('Erro no upload da imagem:', uploadError);
           throw uploadError;
         }
       }
 
-      console.log('Atualizando usuário no Airtable...');
       const updateData = {
         name: formData.name,
         profile_image: imageUrl,
+        bio: formData.bio,
+        specialties: formData.specialties,
+        social_media: formData.social_media,
         updated_at: new Date().toISOString()
       };
-      console.log('Dados para atualização:', updateData);
 
-      const updatedRecord = await updateUser(airtableUser.id, updateData);
-      console.log('Resposta do Airtable:', updatedRecord);
-
-      console.log('Iniciando refresh dos dados do usuário...');
+      await updateProfile(airtableUser.id, updateData);
       await refreshUser();
-      console.log('Refresh concluído');
       
       setSuccess('Perfil atualizado com sucesso!');
       setSelectedImage(null);
     } catch (err: any) {
-      console.error('Erro durante a atualização:', err);
       setError(err.message || 'Erro ao atualizar perfil');
     } finally {
-      console.log('Finalizando processo de atualização');
       setIsLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name === 'specialties') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value.split(',').map(item => item.trim())
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -142,20 +141,16 @@ export default function ProfilePage() {
   const handleConfirmedDelete = async () => {
     setIsDeleting(true);
     try {
-      // Primeiro deletar do Firebase
       if (user) {
         await deleteFirebaseUser(user);
       }
 
-      // Depois deletar do Airtable
       try {
         await deleteUser(airtableUser.id);
       } catch (airtableError) {
         console.error('Erro ao deletar do Airtable:', airtableError);
-        // Não vamos mostrar erro aqui pois o usuário já foi deletado do Firebase
       }
 
-      // Redirecionar para login
       router.push('/login');
     } catch (err: any) {
       setError(err.message || 'Erro ao deletar conta');
@@ -168,85 +163,173 @@ export default function ProfilePage() {
   }
 
   return (
-    <>
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
-              Editar Perfil
-            </h3>
-            
-            <form onSubmit={handleSubmit} className="mt-5 space-y-6">
-              {error && (
-                <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg">
-                  {error}
-                </div>
-              )}
-              
-              {success && (
-                <div className="bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-200 px-4 py-3 rounded-lg">
-                  {success}
-                </div>
-              )}
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Cabeçalho */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Meu Perfil</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Gerencie suas informações pessoais e preferências da conta
+          </p>
+        </div>
 
-              <div className="flex flex-col items-center space-y-4">
+        {/* Grid Principal */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Coluna da Esquerda - Foto e Informações Rápidas */}
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
+              <div className="mb-6">
                 <ImageUpload
                   currentImage={airtableUser.fields.profile_image}
                   onImageSelect={handleImageSelect}
-                  className="mb-6"
                 />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Clique na imagem para alterar sua foto de perfil
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Clique na imagem para alterar
                 </p>
               </div>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                {formData.name}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {getRoleDisplay(formData.role)}
+              </p>
+            </div>
 
-              <Input
-                label="Nome completo"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-
-              <Input
-                label="Email"
-                name="email"
-                type="email"
-                value={formData.email}
-                disabled
-                required
-              />
-
-              <Input
-                label="Tipo de usuário"
-                name="role"
-                type="text"
-                value={getRoleDisplay(formData.role)}
-                disabled
-                required
-              />
-
-              <div className="flex justify-end">
-                <Button type="submit" isLoading={isLoading}>
-                  Salvar alterações
-                </Button>
+            {/* Status da Conta */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Status da Conta
+              </h3>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Status</span>
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200">
+                  Ativo
+                </span>
               </div>
-            </form>
+            </div>
+          </div>
 
-            <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col space-y-3">
-                <h4 className="text-lg font-medium text-red-600 dark:text-red-400">Zona Perigosa</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Uma vez deletada, sua conta não poderá ser recuperada.
-                </p>
-                <div>
+          {/* Coluna da Direita - Formulário e Ações */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Mensagens de Feedback */}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
+            
+            {success && (
+              <div className="bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-200 px-4 py-3 rounded-lg">
+                {success}
+              </div>
+            )}
+
+            {/* Formulário Principal */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6">
+                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
+                  Informações Pessoais
+                </h2>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-6">
+                    <div className="flex items-center space-x-3">
+                      <UserIcon className="h-5 w-5 text-gray-400" />
+                      <Input
+                        label="Nome completo"
+                        name="name"
+                        type="text"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                      <Input
+                        label="Email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        disabled
+                        required
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <AcademicCapIcon className="h-5 w-5 text-gray-400" />
+                      <Input
+                        label="Tipo de usuário"
+                        name="role"
+                        type="text"
+                        value={getRoleDisplay(formData.role)}
+                        disabled
+                        required
+                      />
+                    </div>
+
+                    {isTeacher && (
+                      <>
+                        <div className="space-y-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                            Biografia
+                          </label>
+                          <textarea
+                            name="bio"
+                            rows={4}
+                            value={formData.bio}
+                            onChange={handleChange}
+                            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
+                          />
+                        </div>
+
+                        <Input
+                          label="Especialidades"
+                          name="specialties"
+                          value={formData.specialties.join(', ')}
+                          onChange={handleChange}
+                          placeholder="Ex: React, Next.js, Node.js"
+                        />
+
+                        <Input
+                          label="Redes Sociais"
+                          name="social_media"
+                          value={formData.social_media}
+                          onChange={handleChange}
+                          placeholder="Links para suas redes sociais"
+                        />
+                      </>
+                    )}
+                  </div>
+
+                  <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-end">
+                      <Button type="submit" isLoading={isLoading}>
+                        Salvar alterações
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Seção de Perigo */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6">
+                <h2 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4">
+                  Zona de Perigo
+                </h2>
+                <div className="border-l-4 border-red-500 pl-4 py-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Uma vez deletada, sua conta não poderá ser recuperada. Por favor, tenha certeza.
+                  </p>
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={handleDeleteAccount}
                     isLoading={isDeleting}
-                    className="!bg-red-50 dark:!bg-red-900/50 !text-red-600 dark:!text-red-400 hover:!bg-red-100 dark:hover:!bg-red-900/70 w-auto"
+                    className="!bg-red-50 dark:!bg-red-900/50 !text-red-600 dark:!text-red-400 hover:!bg-red-100 dark:hover:!bg-red-900/70"
                   >
                     Deletar minha conta
                   </Button>
@@ -263,6 +346,6 @@ export default function ProfilePage() {
         onSuccess={handleConfirmedDelete}
         user={user}
       />
-    </>
+    </div>
   );
 } 

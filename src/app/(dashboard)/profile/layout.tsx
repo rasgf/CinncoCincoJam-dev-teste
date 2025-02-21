@@ -29,15 +29,15 @@ export default function ProfileLayout({
   return (
     <div className="flex gap-6">
       <div className="w-64 flex-shrink-0">
-        <nav className="bg-white shadow rounded-lg p-4">
+        <nav className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-700/20 rounded-lg p-4">
           {menuItems.map(item => item.show && (
             <Link
               key={item.href}
               href={item.href}
               className={`block px-3 py-2 rounded-md text-sm font-medium ${
                 pathname === item.href
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-900 hover:bg-gray-50'
+                  ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                  : 'text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               {item.label}
@@ -46,7 +46,7 @@ export default function ProfileLayout({
         </nav>
       </div>
       <div className="flex-1">
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-700/20 rounded-lg">
           {children}
         </div>
       </div>

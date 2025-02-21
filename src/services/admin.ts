@@ -55,6 +55,17 @@ interface CourseRecord extends Record<FieldSet> {
   };
 }
 
+interface CourseFields {
+  price: number;
+  course_id: string;
+  // ... outros campos
+}
+
+interface Course {
+  id: string;
+  fields: CourseFields;
+}
+
 export const getAdminStats = async (): Promise<AdminStats> => {
   try {
     // Inicializar valores padrão
@@ -94,10 +105,14 @@ export const getAdminStats = async (): Promise<AdminStats> => {
         }).firstPage();
 
         // Calcular receita total
-        totalRevenue = activeEnrollments.reduce((total, enrollment) => {
-          const course = publishedCourses.find(c => c.id === enrollment.fields.course_id);
-          return total + (course?.fields.price || 0);
-        }, 0);
+        if (activeEnrollments.length > 0) {
+          totalRevenue = activeEnrollments.reduce((total, enrollment) => {
+            const course = publishedCourses.find(c => c.id === enrollment.fields.course_id);
+            // Garantir que o preço é um número
+            const price = course?.fields.price ? Number(course.fields.price) : 0;
+            return total + price;
+          }, 0);
+        }
 
         // Obter IDs únicos de alunos ativos
         const activeStudentIds = new Set(

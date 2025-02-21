@@ -38,7 +38,7 @@ export function CourseCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700/20 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700/20 overflow-hidden hover:shadow-lg dark:hover:shadow-gray-600/30 transition-shadow duration-200">
       <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
         {thumbnail ? (
           <img
@@ -62,7 +62,7 @@ export function CourseCard({
       </div>
       
       <div className="p-4">
-        <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-1">{title}</h3>
+        <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-1 line-clamp-1">{title}</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{description}</p>
         
         <div className="flex items-center justify-between">
@@ -78,12 +78,43 @@ export function CourseCard({
           )}
         </div>
 
+        {level && (
+          <div className="mt-2">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+              {level === 'beginner' ? 'Iniciante' :
+               level === 'intermediate' ? 'Intermediário' :
+               level === 'advanced' ? 'Avançado' : level}
+            </span>
+          </div>
+        )}
+
         {what_will_learn && (
-          <div>
-            <h4>O que você vai aprender:</h4>
-            <ul>
+          <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              O que você vai aprender:
+            </h4>
+            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
               {getArrayFromString(what_will_learn).map((item, index) => (
-                <li key={index}>{item}</li>
+                <li key={index} className="flex items-center">
+                  <span className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full mr-2" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {requirements && (
+          <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Pré-requisitos:
+            </h4>
+            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+              {getArrayFromString(requirements).map((item, index) => (
+                <li key={index} className="flex items-center">
+                  <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full mr-2" />
+                  {item}
+                </li>
               ))}
             </ul>
           </div>

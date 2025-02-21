@@ -63,6 +63,18 @@ export function useAuth() {
     return signOut(auth);
   };
 
+  const refreshUser = async () => {
+    if (user) {
+      try {
+        const airtableUserData = await getUserByUid(user.uid);
+        setAirtableUser(airtableUserData);
+      } catch (error) {
+        console.error('Error refreshing Airtable user:', error);
+        throw error;
+      }
+    }
+  };
+
   return {
     user,
     airtableUser,
@@ -71,5 +83,8 @@ export function useAuth() {
     login,
     logout,
     setAirtableUser,
+    refreshUser,
   };
-} 
+}
+
+export type AuthHookReturn = ReturnType<typeof useAuth>; 

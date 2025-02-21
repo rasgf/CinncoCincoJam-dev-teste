@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { FullScreenLoading } from '@/components/common/Loading';
 
 export default function DashboardLayout({
   children,
@@ -49,11 +50,7 @@ export default function DashboardLayout({
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    return <FullScreenLoading />;
   }
 
   const menuItems = [
@@ -69,7 +66,7 @@ export default function DashboardLayout({
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <Link href="/dashboard" className="text-xl font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-                  CincocincoJam
+                  CincoCincoJam
                 </Link>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

@@ -105,34 +105,50 @@ export default function ManageCoursesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="flex items-center justify-center min-h-[400px] p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Meus Cursos</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Meus Cursos</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Gerencie seus cursos e conteúdos
+          </p>
+        </div>
         
         <Button onClick={() => setIsModalOpen(true)}>
           Novo Curso
         </Button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
       {courses.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            Você ainda não criou nenhum curso.
-          </p>
+        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-8 text-center">
+          <div className="max-w-md mx-auto">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              Você ainda não criou nenhum curso.
+            </p>
+            <Button onClick={() => setIsModalOpen(true)}>
+              Criar meu primeiro curso
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {courses.map((course) => (
             <div 
               key={course.id} 
-              className="relative group"
+              className="relative group transform hover:scale-[1.02] transition-all duration-200"
             >
               <CourseCard
                 title={course.fields.title}
@@ -143,13 +159,13 @@ export default function ManageCoursesPage() {
               />
 
               {/* Status Badge */}
-              <div className="absolute top-2 right-2">
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+              <div className="absolute top-2 right-2 z-10">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full shadow-sm ${
                   course.fields.status === 'published' 
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200'
                     : course.fields.status === 'draft'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-gray-100 text-gray-800'
+                    ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                 }`}>
                   {course.fields.status === 'published' ? 'Publicado' : 
                    course.fields.status === 'draft' ? 'Rascunho' : 'Arquivado'}
@@ -157,14 +173,14 @@ export default function ManageCoursesPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="absolute top-2 left-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div className="absolute top-2 left-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10">
                 {/* Edit Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleCourseClick(course);
                   }}
-                  className="p-2 bg-white rounded-full shadow hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                  className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl hover:bg-blue-50 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transform hover:scale-105 transition-all duration-200"
                   title="Editar curso"
                 >
                   <PencilIcon className="w-5 h-5" />
@@ -177,11 +193,11 @@ export default function ManageCoursesPage() {
                     handleDeleteCourse(course.id);
                   }}
                   disabled={deletingCourseId === course.id}
-                  className={`p-2 bg-white rounded-full shadow
-                    hover:bg-red-50 ${
+                  className={`p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl
+                    hover:bg-red-50 dark:hover:bg-red-900/50 transform hover:scale-105 transition-all duration-200 ${
                       deletingCourseId === course.id 
                         ? 'cursor-not-allowed opacity-50' 
-                        : 'text-red-600 hover:text-red-700'
+                        : 'text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300'
                     }`}
                   title="Remover curso"
                 >

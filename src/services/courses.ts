@@ -85,39 +85,51 @@ export const getProfessorStats = async (professorId: string): Promise<ProfessorS
   }
 };
 
-export const createCourse = async (courseData: CreateCourseData): Promise<Course> => {
+interface CreateCourseFields {
+  title: string;
+  description: string;
+  price: number;
+  level: string;
+  status: string;
+  thumbnail: File | null;
+  what_will_learn: string;
+  requirements: string;
+  professor_id: string;
+}
+
+export const createCourse = async (data: CreateCourseFields): Promise<Course> => {
   try {
     let thumbnailUrl = '';
     
-    if (courseData.thumbnail) {
+    if (data.thumbnail) {
       const timestamp = new Date().getTime();
-      const fileName = `${timestamp}_${courseData.thumbnail.name}`;
+      const fileName = `${timestamp}_${data.thumbnail.name}`;
       const storageRef = ref(storage, `course_thumbnails/${fileName}`);
       
-      await uploadBytes(storageRef, courseData.thumbnail);
+      await uploadBytes(storageRef, data.thumbnail);
       thumbnailUrl = await getDownloadURL(storageRef);
     }
 
-    const whatWillLearn = Array.isArray(courseData.what_will_learn) 
-      ? courseData.what_will_learn.join(',')
+    const whatWillLearn = Array.isArray(data.what_will_learn) 
+      ? data.what_will_learn.join(',')
       : '';
 
-    const requirements = Array.isArray(courseData.requirements)
-      ? courseData.requirements.join(',')
+    const requirements = Array.isArray(data.requirements)
+      ? data.requirements.join(',')
       : '';
 
     const formattedDate = new Date().toISOString().split('T')[0];
 
     const courseFields = {
-      title: courseData.title,
-      description: courseData.description,
-      price: Number(courseData.price.toFixed(2)),
-      level: courseData.level,
-      status: courseData.status,
+      title: data.title,
+      description: data.description,
+      price: Number(data.price),
+      level: data.level,
+      status: data.status,
       thumbnail: thumbnailUrl,
       what_will_learn: whatWillLearn,
       requirements: requirements,
-      professor_id: courseData.professor_id,
+      professor_id: data.professor_id,
       created_at: formattedDate,
       updated_at: formattedDate
     };
@@ -199,13 +211,21 @@ export const updateCourse = async (courseId: string, courseData: {
   }
 };
 
-export const getCourseById = async (id: string) => {
+export const getCourseById = async (id: string): Promise<Course> => {
   try {
-    const records = await tables.courses.select({
-      filterByFormula: `RECORD_ID() = '${id}'`
-    }).firstPage();
-
-    return records[0];
+    const records = await tables.courses.find(id);
+    
+    return {
+      id: records.id,
+      fields: {
+        title: records.fields.title as string,
+        description: records.fields.description as string,
+        thumbnail: records.fields.thumbnail as string | undefined,
+        what_will_learn: records.fields.what_will_learn,
+        price: records.fields.price as number | undefined,
+        status: records.fields.status as string | undefined
+      }
+    };
   } catch (error) {
     console.error('Error fetching course:', error);
     throw error;

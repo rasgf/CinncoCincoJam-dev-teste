@@ -55,12 +55,16 @@ export default function CoursesPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Cursos Disponíveis</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Cursos Disponíveis</h1>
         
-        <div className="flex items-center bg-white rounded-lg shadow p-1">
+        <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700/20 p-1">
           <button
             onClick={() => setView('grid')}
-            className={`p-2 rounded ${view === 'grid' ? 'bg-gray-100' : ''}`}
+            className={`p-2 rounded ${
+              view === 'grid' 
+                ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' 
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
             title="Visualização em grade"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -69,7 +73,11 @@ export default function CoursesPage() {
           </button>
           <button
             onClick={() => setView('list')}
-            className={`p-2 rounded ${view === 'list' ? 'bg-gray-100' : ''}`}
+            className={`p-2 rounded ${
+              view === 'list' 
+                ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100' 
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
             title="Visualização em lista"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -104,21 +112,22 @@ export default function CoursesPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white shadow rounded-lg divide-y">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
           {courses.map((course) => (
             <div 
               key={course.id}
-              className="flex items-center p-4 hover:bg-gray-50"
+              className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+              onClick={() => handleCourseClick(course.id)}
             >
               <div className="flex-1">
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                   {course.fields.title}
                 </h3>
-                <p className="text-sm text-gray-500 line-clamp-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
                   {course.fields.description}
                 </p>
               </div>
-              <div className="ml-4 text-sm font-medium text-gray-900">
+              <div className="ml-4 text-sm font-medium text-gray-900 dark:text-gray-100">
                 R$ {course.fields.price.toFixed(2)}
               </div>
             </div>
