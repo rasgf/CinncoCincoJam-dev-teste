@@ -357,4 +357,34 @@ export const deleteCourse = async (courseId: string) => {
     console.error('Error deleting course:', error);
     throw error;
   }
+};
+
+export const getAllCourses = async (): Promise<Course[]> => {
+  try {
+    const coursesRef = ref(db, collections.courses);
+    const snapshot = await get(coursesRef);
+    
+    const courses: Course[] = [];
+    if (snapshot.exists()) {
+      snapshot.forEach((childSnapshot) => {
+        const courseData = childSnapshot.val();
+        courses.push({
+          id: childSnapshot.key as string,
+          fields: courseData
+        });
+      });
+    }
+    
+    // Ordenar por data de criação (mais recente primeiro)
+    courses.sort((a, b) => {
+      const dateA = new Date(a.fields.created_at || 0).getTime();
+      const dateB = new Date(b.fields.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+    
+    return courses;
+  } catch (error) {
+    console.error('Erro ao buscar todos os cursos:', error);
+    throw error;
+  }
 }; 
