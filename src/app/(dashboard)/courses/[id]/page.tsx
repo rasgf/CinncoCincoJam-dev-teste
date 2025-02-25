@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { getCourseById } from '@/services/courses';
+import { getCourseById } from '@/services/firebase-courses';
 import { Button } from '@/components/common/Button';
 import { Loading } from '@/components/common/Loading';
+import { Course } from '@/types/course';
+import { ProxyImage } from '@/components/common/ProxyImage';
 
 interface CourseFields {
   title: string;
@@ -184,10 +186,13 @@ export default function CoursePage() {
         <div>
           {course.fields.thumbnail ? (
             <div className="relative aspect-video rounded-lg overflow-hidden shadow-lg">
-              <img
+              <ProxyImage
                 src={course.fields.thumbnail}
                 alt={course.fields.title}
+                width={800}
+                height={450}
                 className="w-full h-full object-cover"
+                priority
               />
               <div className="absolute inset-0 bg-black/10 dark:bg-black/30" />
             </div>

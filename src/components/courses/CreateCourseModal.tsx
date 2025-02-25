@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { getProfessorByUserId } from '@/services/professors';
-import { createCourse } from '@/services/courses';
+import { getProfessorByUserId } from '@/services/firebase-professors';
+import { createCourse } from '@/services/firebase-courses';
 
 export function CreateCourseModal({ isOpen, onClose }: CreateCourseModalProps) {
   const { airtableUser } = useAuthContext();

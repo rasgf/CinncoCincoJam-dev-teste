@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { VideoPlayer } from '@/components/common/VideoPlayer';
 
 interface VideoContent {
   id: string;
@@ -25,6 +26,7 @@ export function CourseContentManager({ courseId, contents, onSave }: CourseConte
 
   const [contentsState, setContents] = useState<VideoContent[]>(contents);
   const [saving, setSaving] = useState(false);
+  const [videoErrors, setVideoErrors] = useState<{[key: string]: any}>({});
 
   useEffect(() => {
     setContents(contents);
@@ -72,6 +74,14 @@ export function CourseContentManager({ courseId, contents, onSave }: CourseConte
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleVideoError = (contentId: string, error: any) => {
+    console.error(`Erro no preview do vídeo ${contentId}:`, error);
+    setVideoErrors(prev => ({
+      ...prev,
+      [contentId]: error
+    }));
   };
 
   return (
@@ -156,11 +166,10 @@ export function CourseContentManager({ courseId, contents, onSave }: CourseConte
               {content.youtubeUrl && (
                 <div className="mt-4">
                   <div className="aspect-video rounded-lg overflow-hidden bg-gray-100">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${getYouTubeVideoId(content.youtubeUrl)}`}
-                      title={content.title}
-                      className="w-full h-full"
-                      allowFullScreen
+                    <VideoPlayer 
+                      videoId={content.youtubeUrl}
+                      title={content.title || "Preview do vídeo"}
+                      onError={(error) => handleVideoError(content.id, error)}
                     />
                   </div>
                 </div>

@@ -4,19 +4,10 @@ import { useEffect, useState } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { getUserCourses, getProfessorStats, getAdminStats } from '@/services/courses';
-
-interface Course {
-  id: string;
-  fields: {
-    title: string;
-    description: string;
-    thumbnail?: { url: string }[];
-    progress?: number;
-    professor_name?: string;
-    price?: number;
-  };
-}
+import { getUserCourses } from '@/services/firebase-courses';
+import { getProfessorStats } from '@/services/firebase-courses';
+import { getAdminStats } from '@/services/firebase-admin';
+import { Course } from '@/types/course';
 
 interface Stats {
   totalStudents: number;

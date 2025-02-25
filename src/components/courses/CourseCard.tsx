@@ -1,5 +1,7 @@
 'use client';
 
+import { ProxyImage } from '../common/ProxyImage';
+
 interface CourseCardProps {
   title: string;
   description: string;
@@ -41,9 +43,11 @@ export function CourseCard({
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700/20 overflow-hidden hover:shadow-lg dark:hover:shadow-gray-600/30 transition-shadow duration-200">
       <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
         {thumbnail ? (
-          <img
+          <ProxyImage
             src={thumbnail}
             alt={title}
+            width={400}
+            height={200}
             className="w-full h-full object-cover"
           />
         ) : (

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { getAdminStats } from '@/services/admin';
-import { getProfessorStats } from '@/services/courses';
-import { getStudentStats } from '@/services/enrollments';
+import { getAdminStats } from '@/services/firebase-admin';
+import { getProfessorStats } from '@/services/firebase-courses';
+import { getStudentStats } from '@/services/firebase-enrollments';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { 
@@ -45,7 +45,7 @@ interface StudentStats {
 }
 
 export default function DashboardPage() {
-  const { airtableUser } = useAuthContext();
+  const { user, airtableUser: firebaseUser } = useAuthContext();
   const [loading, setLoading] = useState(true);
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [professorStats, setProfessorStats] = useState<ProfessorStats | null>(null);
@@ -53,25 +53,25 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadStats();
-  }, [airtableUser]);
+  }, [firebaseUser]);
 
   const loadStats = async () => {
-    if (!airtableUser) return;
+    if (!firebaseUser) return;
 
     try {
       setLoading(true);
       
-      switch (airtableUser.fields.role) {
+      switch (firebaseUser.fields.role) {
         case 'admin':
           const adminData = await getAdminStats();
           setAdminStats(adminData);
           break;
         case 'professor':
-          const professorData = await getProfessorStats(airtableUser.id);
+          const professorData = await getProfessorStats(firebaseUser.id);
           setProfessorStats(professorData);
           break;
         case 'aluno':
-          const studentData = await getStudentStats(airtableUser.id);
+          const studentData = await getStudentStats(firebaseUser.id);
           setStudentStats(studentData);
           break;
       }
@@ -90,7 +90,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!airtableUser) {
+  if (!firebaseUser) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">Usuário não encontrado.</p>
@@ -279,9 +279,9 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6">
-      {airtableUser.fields.role === 'admin' && renderAdminDashboard()}
-      {airtableUser.fields.role === 'professor' && renderProfessorDashboard()}
-      {airtableUser.fields.role === 'aluno' && renderStudentDashboard()}
+      {firebaseUser.fields.role === 'admin' && renderAdminDashboard()}
+      {firebaseUser.fields.role === 'professor' && renderProfessorDashboard()}
+      {firebaseUser.fields.role === 'aluno' && renderStudentDashboard()}
     </div>
   );
 } 

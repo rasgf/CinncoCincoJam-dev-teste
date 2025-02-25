@@ -3,19 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { getAllPublishedCourses } from '@/services/courses';
-
-interface Course {
-  id: string;
-  fields: {
-    title: string;
-    description: string;
-    price: number;
-    category: string;
-    level: string;
-    thumbnail?: string;
-  };
-}
+import { getAllPublishedCourses } from '@/services/firebase-courses';
+import { Course } from '@/types/course';
 
 export default function CoursesPage() {
   const router = useRouter();

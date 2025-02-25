@@ -9,7 +9,7 @@ import {
   User
 } from 'firebase/auth';
 import { auth } from '@/config/firebase';
-import { createUser, getUserByUid } from '@/services/airtable';
+import { createUser, getUserByUid } from '@/services/firebase';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -21,10 +21,10 @@ export function useAuth() {
       setUser(user);
       if (user) {
         try {
-          const airtableUserData = await getUserByUid(user.uid);
-          setAirtableUser(airtableUserData);
+          const firebaseUserData = await getUserByUid(user.uid);
+          setAirtableUser(firebaseUserData);
         } catch (error) {
-          console.error('Error fetching Airtable user:', error);
+          console.error('Error fetching Firebase user:', error);
         }
       } else {
         setAirtableUser(null);
@@ -39,7 +39,7 @@ export function useAuth() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Criar usuário no Airtable
+      // Criar usuário no Firebase
       await createUser({
         uid: userCredential.user.uid,
         email: userCredential.user.email!,
@@ -66,10 +66,10 @@ export function useAuth() {
   const refreshUser = async () => {
     if (user) {
       try {
-        const airtableUserData = await getUserByUid(user.uid);
-        setAirtableUser(airtableUserData);
+        const firebaseUserData = await getUserByUid(user.uid);
+        setAirtableUser(firebaseUserData);
       } catch (error) {
-        console.error('Error refreshing Airtable user:', error);
+        console.error('Error refreshing Firebase user:', error);
         throw error;
       }
     }

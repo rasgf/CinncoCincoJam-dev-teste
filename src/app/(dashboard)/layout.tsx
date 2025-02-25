@@ -13,9 +13,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading, logout, airtableUser } = useAuthContext();
-  const isTeacher = airtableUser?.fields.role === 'professor';
-  const isAdmin = airtableUser?.fields.role === 'admin';
+  const { user, loading, logout, airtableUser: firebaseUser } = useAuthContext();
+  const isTeacher = firebaseUser?.fields.role === 'professor';
+  const isAdmin = firebaseUser?.fields.role === 'admin';
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function DashboardLayout({
               
               {/* Nome do usuário */}
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                {airtableUser?.fields.name}
+                {firebaseUser?.fields.name}
               </span>
 
               {/* Botão de Toggle Dark Mode */}
@@ -122,7 +122,7 @@ export default function DashboardLayout({
               <div className="flex flex-col space-y-1">
                 {/* Nome do usuário Mobile */}
                 <span className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {airtableUser?.fields.name}
+                  {firebaseUser?.fields.name}
                 </span>
 
                 {menuItems.map((item) => (

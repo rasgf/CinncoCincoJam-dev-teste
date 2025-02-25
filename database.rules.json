@@ -1,0 +1,15 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "courses": {
+      ".indexOn": ["professor_id", "status"]
+    },
+    "enrollments": {
+      ".indexOn": ["user_id", "course_id"]
+    },
+    "users": {
+      ".indexOn": ["status", "role"]
+    }
+  }
+} 

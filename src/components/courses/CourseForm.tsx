@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
-import { createCourse } from '@/services/courses';
+import { createCourse } from '@/services/firebase-courses';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { CreateCourseData } from '@/types/course';
 

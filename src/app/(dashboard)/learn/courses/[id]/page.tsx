@@ -2,27 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getCourseById } from '@/services/courses';
-import { getCourseContents } from '@/services/courseContents';
+import { getCourseById } from '@/services/firebase-courses';
+import { getCourseContents } from '@/services/firebase-course-contents';
 import { Card } from '@/components/common/Card';
-
-interface VideoContent {
-  id: string;
-  title: string;
-  youtubeUrl: string;
-  releaseDate: string;
-  releaseTime: string;
-  order: number;
-}
-
-interface Course {
-  id: string;
-  fields: {
-    title: string;
-    description: string;
-    thumbnail?: string;
-  };
-}
+import { Course, VideoContent } from '@/types/course';
+import { VideoPlayer } from '@/components/common/VideoPlayer';
 
 export default function CoursePlayerPage() {
   const { id } = useParams();
@@ -30,6 +14,7 @@ export default function CoursePlayerPage() {
   const [contents, setContents] = useState<VideoContent[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [videoError, setVideoError] = useState<any>(null);
 
   useEffect(() => {
     loadCourseAndContents();
@@ -55,6 +40,11 @@ export default function CoursePlayerPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVideoError = (error: any) => {
+    console.error('Erro no player de vídeo:', error);
+    setVideoError(error);
   };
 
   if (loading) {
@@ -87,7 +77,10 @@ export default function CoursePlayerPage() {
                 {contents.map((video) => (
                   <button
                     key={video.id}
-                    onClick={() => setSelectedVideo(video)}
+                    onClick={() => {
+                      setSelectedVideo(video);
+                      setVideoError(null);
+                    }}
                     className={`w-full text-left p-3 rounded-lg transition-colors ${
                       selectedVideo?.id === video.id
                         ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
@@ -107,11 +100,10 @@ export default function CoursePlayerPage() {
               {selectedVideo ? (
                 <div className="space-y-4">
                   <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${getYouTubeVideoId(selectedVideo.youtubeUrl)}`}
+                    <VideoPlayer 
+                      videoId={selectedVideo.youtubeUrl}
                       title={selectedVideo.title}
-                      className="w-full h-full"
-                      allowFullScreen
+                      onError={handleVideoError}
                     />
                   </div>
                   <div>

@@ -16,14 +16,15 @@ export interface Course {
     title: string;
     description: string;
     price: number;
-    level: CourseLevel;
-    status: CourseStatus;
+    level: CourseLevel | string;
+    status: CourseStatus | string;
     thumbnail?: string;
-    what_will_learn: string;
-    requirements: string;
-    professor_id: string;
-    created_at: string;
-    updated_at: string;
+    what_will_learn?: string;
+    requirements?: string;
+    professor_id?: string;
+    category?: string;
+    created_at?: string;
+    updated_at?: string;
   };
 }
 
@@ -46,11 +47,11 @@ export interface CreateCourseData {
   title: string;
   description: string;
   price: number;
-  level: CourseLevel;
-  status: CourseStatus;
-  thumbnail?: File | null;
-  what_will_learn: string[];
-  requirements: string[];
+  level: CourseLevel | string;
+  status: CourseStatus | string;
+  thumbnail: File | null;
+  what_will_learn: string;
+  requirements: string;
   professor_id: string;
 }
 

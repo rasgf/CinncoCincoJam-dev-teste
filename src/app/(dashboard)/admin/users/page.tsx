@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/common/Button';
 import { UserModal } from '@/components/admin/UserModal';
-import { getAllUsers, createUser, removeUser, updateUserRole, promoteToTeacher, revokeTeacherRole } from '@/services/admin';
+import { getAllUsers, createUser } from '@/services/firebase';
+import { removeUser, updateUserRole, promoteToTeacher, revokeTeacherRole } from '@/services/firebase-users';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { createSecondaryApp } from '@/config/firebase';
 import { TrashIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
@@ -50,13 +51,12 @@ export default function UsersPage() {
         'senha123' // Senha temporária
       );
 
-      // Criar usuário no Airtable
+      // Criar usuário no Firebase
       await createUser({
         uid: user.uid,
         email: userData.email,
         name: userData.name,
-        role: userData.role,
-        status: userData.status
+        role: userData.role
       });
 
       // Desconectar a instância secundária
@@ -82,7 +82,7 @@ export default function UsersPage() {
       // Criar uma nova instância do Firebase para operação de remoção
       const { secondaryAuth } = createSecondaryApp();
 
-      await removeUser(userId, firebaseUid, email, secondaryAuth);
+      await removeUser(userId, firebaseUid, email);
       await loadUsers(); // Recarrega a lista
     } catch (error) {
       console.error('Erro ao remover usuário:', error);

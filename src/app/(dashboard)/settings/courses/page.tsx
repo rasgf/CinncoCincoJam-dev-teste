@@ -5,8 +5,8 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { Button } from '@/components/common/Button';
 import { CourseModal } from '@/components/courses/CourseModal';
-import { getUserCourses, createCourse } from '@/services/courses';
-import { CourseLevel, CourseStatus } from '@/types/course';
+import { getUserCourses, createCourse } from '@/services/firebase-courses';
+import { Course, CourseLevel, CourseStatus } from '@/types/course';
 
 interface Course {
   id: string;

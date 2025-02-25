@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/common/Button';
-import { getPendingProfessors, approveProfessor, rejectProfessor } from '@/services/admin';
+import { getPendingProfessors, approveProfessor, rejectProfessor } from '@/services/firebase-professors-admin';
 
 interface PendingProfessor {
   id: string;

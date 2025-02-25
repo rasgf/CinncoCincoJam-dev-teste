@@ -34,3 +34,32 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Firebase Storage & CORS
+
+Este projeto utiliza o Firebase Storage para armazenamento de imagens. Para resolver problemas de CORS ao acessar imagens diretamente do Firebase Storage, implementamos as seguintes soluções:
+
+### Proxy de Imagem
+
+Um proxy de imagem foi implementado em `/api/image-proxy` que busca as imagens do Firebase Storage no lado do servidor, evitando problemas de CORS no cliente.
+
+### Componente ProxyImage
+
+Um componente `ProxyImage` foi criado para simplificar o uso de imagens, detectando automaticamente URLs do Firebase Storage e utilizando o proxy quando necessário.
+
+### Configuração CORS no Firebase Storage
+
+Para ambientes de produção, fornecemos um script para configurar regras CORS no Firebase Storage:
+
+```bash
+# Instalar Firebase CLI
+npm install -g firebase-tools
+
+# Login no Firebase
+firebase login
+
+# Configurar CORS
+node src/scripts/setup-firebase-cors.js
+```
+
+Para mais detalhes, consulte a documentação em [docs/firebase-storage-cors.md](docs/firebase-storage-cors.md)

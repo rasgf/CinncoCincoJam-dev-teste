@@ -5,7 +5,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { Button } from '@/components/common/Button';
 import { CourseModal } from '@/components/courses/CourseModal';
-import { getUserCourses, createCourse, updateCourse, deleteCourse } from '@/services/courses';
+import { getUserCourses, createCourse, updateCourse, deleteCourse } from '@/services/firebase-courses';
 import { EditCourseModal } from '@/components/courses/EditCourseModal';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';

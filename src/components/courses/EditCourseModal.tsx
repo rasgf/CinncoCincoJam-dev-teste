@@ -6,7 +6,7 @@ import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { ImageUpload } from '@/components/common/ImageUpload';
 import { CourseContentManager } from './CourseContentManager';
-import { getCourseContents, updateCourseContents } from '@/services/courseContents';
+import { getCourseContents, updateCourseContents } from '@/services/firebase-course-contents';
 import { EyeIcon, EyeSlashIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline';
 import { VideoContent } from '@/types/course';
 
@@ -35,6 +35,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
     price: course.fields.price.toString(),
     level: course.fields.level,
     status: course.fields.status,
+    category: course.fields.category || '',
     thumbnail: null as File | null
   });
   const [loading, setLoading] = useState(false);
@@ -191,6 +192,14 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
                     value={formData.price}
                     onChange={handleChange}
                     required
+                  />
+
+                  <Input
+                    label="Categoria"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    placeholder="Ex: Programação, Design, Marketing, etc."
                   />
 
                   {/* Status do Curso */}

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Button } from '@/components/common/Button';
-import { getAdminStats } from '@/services/admin';
+import { getAdminStats } from '@/services/firebase-admin';
 import { UsersIcon, BookOpenIcon, CurrencyDollarIcon, AcademicCapIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
 interface AdminStats {

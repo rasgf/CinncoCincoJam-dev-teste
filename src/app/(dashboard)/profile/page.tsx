@@ -6,7 +6,7 @@ import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { ImageUpload } from '@/components/common/ImageUpload';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { getUserByUid, updateUser, deleteUser } from '@/services/airtable';
+import { getUserByUid, updateUser, deleteUser } from '@/services/firebase';
 import { deleteUser as deleteFirebaseUser } from 'firebase/auth';
 import { ReauthModal } from '@/components/auth/ReauthModal';
 import { storage } from '@/config/firebase';
@@ -28,7 +28,7 @@ const getRoleDisplay = (role: string) => {
 };
 
 export default function ProfilePage() {
-  const { user, airtableUser, refreshUser } = useAuthContext();
+  const { user, airtableUser: firebaseUser, refreshUser } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -44,20 +44,20 @@ export default function ProfilePage() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReauthModalOpen, setIsReauthModalOpen] = useState(false);
-  const isTeacher = airtableUser?.fields.role === 'professor';
+  const isTeacher = firebaseUser?.fields.role === 'professor';
 
   useEffect(() => {
-    if (airtableUser) {
+    if (firebaseUser) {
       setFormData({
-        name: airtableUser.fields.name || '',
-        email: airtableUser.fields.email || '',
-        role: airtableUser.fields.role || '',
-        bio: airtableUser.fields.bio || '',
-        specialties: airtableUser.fields.specialties || [],
-        social_media: airtableUser.fields.social_media || ''
+        name: firebaseUser.fields.name || '',
+        email: firebaseUser.fields.email || '',
+        role: firebaseUser.fields.role || '',
+        bio: firebaseUser.fields.bio || '',
+        specialties: firebaseUser.fields.specialties || [],
+        social_media: firebaseUser.fields.social_media || ''
       });
     }
-  }, [airtableUser]);
+  }, [firebaseUser]);
 
   const handleImageSelect = (file: File) => {
     setSelectedImage(file);
@@ -85,7 +85,7 @@ export default function ProfilePage() {
     setIsLoading(true);
 
     try {
-      let imageUrl = airtableUser?.fields.profile_image;
+      let imageUrl = firebaseUser?.fields.profile_image;
 
       if (selectedImage) {
         try {
@@ -104,7 +104,7 @@ export default function ProfilePage() {
         updated_at: new Date().toISOString()
       };
 
-      await updateProfile(airtableUser.id, updateData);
+      await updateProfile(firebaseUser.id, updateData);
       await refreshUser();
       
       setSuccess('Perfil atualizado com sucesso!');
@@ -146,9 +146,9 @@ export default function ProfilePage() {
       }
 
       try {
-        await deleteUser(airtableUser.id);
-      } catch (airtableError) {
-        console.error('Erro ao deletar do Airtable:', airtableError);
+        await deleteUser(firebaseUser.id);
+      } catch (firebaseError) {
+        console.error('Erro ao deletar do Firebase:', firebaseError);
       }
 
       router.push('/login');
@@ -158,7 +158,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (!user || !airtableUser) {
+  if (!user || !firebaseUser) {
     return null;
   }
 
@@ -180,7 +180,7 @@ export default function ProfilePage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
               <div className="mb-6">
                 <ImageUpload
-                  currentImage={airtableUser.fields.profile_image}
+                  currentImage={firebaseUser.fields.profile_image}
                   onImageSelect={handleImageSelect}
                 />
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
