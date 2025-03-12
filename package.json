@@ -8,7 +8,8 @@
     "vercel-build": "rm -rf .next && next build",
     "start": "next start",
     "lint": "next lint",
-    "extract-schema": "ts-node scripts/extract-schema.ts"
+    "extract-schema": "ts-node scripts/extract-schema.ts",
+    "check-deploy": "node scripts/check-vercel-deploy.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
