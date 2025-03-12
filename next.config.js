@@ -8,13 +8,23 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Configuração para o Vercel
-  output: 'standalone',
-  // Configuração para lidar com grupos de rotas com parênteses
+  // Configuração para lidar melhor com grupos de rotas e manifestos
   experimental: {
     serverExternalPackages: [],
     optimizePackageImports: ['@heroicons/react', '@headlessui/react'],
+    // Adicionando configurações que podem ajudar com a geração dos manifestos
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+    taint: false
   },
+  // Configuração para debug de revalidação e geração de estáticos
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
+  staticPageGenerationTimeout: 120,
   images: {
     remotePatterns: [
       {
