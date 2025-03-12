@@ -1,6 +1,6 @@
 # Diretrizes de Codificação para CincoCincoJam
 
-> **Versão:** 1.0.3  
+> **Versão:** 1.0.5  
 > **Última atualização:** 12/03/2025  
 > **Status:** Ativo
 
@@ -148,6 +148,28 @@ Este documento complementa o README.md principal do projeto. Consulte também:
 - [docs/](./docs/) - Documentação detalhada do projeto
 
 ## 📝 Registro de Alterações
+
+### 12/03/2025
+
+- chore: add Cursor.ai guidelines and project scripts
+- fix: redirecionar para login quando usuário não autenticado acessa a raiz
+- fix: remove serverExternalPackages from next.config.js
+- fix: simplifica componente dashboard para resolver problema de manifesto
+- fix: implementa solução para problema de manifesto no build do Vercel
+- fix: atualiza configuração experimental no next.config.js
+- fix: remove routes do vercel.json para evitar conflitos
+- fix: configuração para deploy no Vercel
+
+### 12/03/2025
+
+- chore: add Cursor.ai guidelines and project scripts
+- fix: redirecionar para login quando usuário não autenticado acessa a raiz
+- fix: remove serverExternalPackages from next.config.js
+- fix: simplifica componente dashboard para resolver problema de manifesto
+- fix: implementa solução para problema de manifesto no build do Vercel
+- fix: atualiza configuração experimental no next.config.js
+- fix: remove routes do vercel.json para evitar conflitos
+- fix: configuração para deploy no Vercel
 
 ### 12/03/2025
 
