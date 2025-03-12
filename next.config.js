@@ -8,16 +8,14 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Configuração para lidar melhor com grupos de rotas e manifestos
+  // Configuração essencial para rodar no Vercel com router groups
+  output: 'standalone',
+  // Configuração experimental simplificada
   experimental: {
-    serverExternalPackages: [],
-    optimizePackageImports: ['@heroicons/react', '@headlessui/react'],
-    // Adicionando configurações que podem ajudar com a geração dos manifestos
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
-    taint: false
+    optimizePackageImports: ['@heroicons/react', '@headlessui/react']
   },
+  // Lista de pacotes externos para o servidor
+  serverExternalPackages: [],
   // Configuração para debug de revalidação e geração de estáticos
   logging: {
     fetches: {
