@@ -12,7 +12,7 @@ const nextConfig = {
   output: 'standalone',
   // Configuração para lidar com grupos de rotas com parênteses
   experimental: {
-    serverComponentsExternalPackages: [],
+    serverExternalPackages: [],
     optimizePackageImports: ['@heroicons/react', '@headlessui/react'],
   },
   images: {
