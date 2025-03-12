@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Atualiza o arquivo de diretrizes se houver novos commits relevantes
+npm run update-guidelines 

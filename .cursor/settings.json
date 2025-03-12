@@ -1,0 +1,19 @@
+{
+  "defaultContextFiles": [
+    "AI_CURSOR_RULES.md"
+  ],
+  "projectDescription": "CincoCincoJam é um projeto Next.js 15 que segue diretrizes específicas de desenvolvimento para garantir consistência e qualidade.",
+  "aiSettings": {
+    "contextStrategy": "auto",
+    "includeAllRelevantFiles": true,
+    "preferredFileTypesForContext": [
+      "*.tsx",
+      "*.ts",
+      "*.js",
+      "*.jsx",
+      "*.md",
+      "*.json",
+      "*.css"
+    ]
+  }
+} 

@@ -63,3 +63,17 @@ node src/scripts/setup-firebase-cors.js
 ```
 
 Para mais detalhes, consulte a documentação em [docs/firebase-storage-cors.md](docs/firebase-storage-cors.md)
+
+## Diretrizes de Codificação
+
+Este projeto segue um conjunto de diretrizes de codificação para garantir consistência e facilitar o desenvolvimento colaborativo. Todas as diretrizes estão documentadas em [AI_CURSOR_RULES.md](AI_CURSOR_RULES.md).
+
+Antes de contribuir com código para este projeto, por favor, leia e siga estas diretrizes. Elas incluem:
+
+- Estrutura do projeto e organização de arquivos
+- Configuração do Next.js recomendada
+- Processos de build e deploy
+- Tratamento de erros e depuração
+- E muito mais!
+
+Se você estiver usando o Cursor.ai como seu IDE, este documento será automaticamente utilizado como contexto para gerar código consistente com nossas práticas.
