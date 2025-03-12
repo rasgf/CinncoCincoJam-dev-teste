@@ -9,14 +9,31 @@ export default function Home() {
   const { user, loading } = useAuthContext();
 
   useEffect(() => {
+    // Se não estiver carregando, podemos tomar a decisão de redirecionamento
     if (!loading) {
       if (user) {
+        // Usuário autenticado, redireciona para o perfil
         router.push('/dashboard/profile');
       } else {
+        // Sem usuário, redireciona sempre para login
         router.push('/login');
       }
     }
   }, [user, loading, router]);
+
+  // Para evitar redirecionamentos incorretos, vamos iniciar o redirecionamento 
+  // para login se a página raiz for carregada
+  useEffect(() => {
+    // Redirecionamento de segurança: se a página principal for acessada diretamente,
+    // redireciona para login após um breve tempo, mesmo durante o carregamento
+    const timeout = setTimeout(() => {
+      if (window.location.pathname === '/') {
+        router.push('/login');
+      }
+    }, 300); // Um pequeno atraso para dar tempo do Firebase auth inicializar
+
+    return () => clearTimeout(timeout);
+  }, [router]);
 
   // Exibir um indicador de carregamento enquanto verifica a autenticação
   return (
