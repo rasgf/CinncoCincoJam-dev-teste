@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
               </Button>
             </Link>
 
-            <Link href="/admin/reports" className="block">
+            <a href="https://cincocincodash.a4tunados.com.br" target="_blank" rel="noopener noreferrer" className="block">
               <Button 
                 variant="secondary" 
                 className="w-full justify-start bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -148,7 +148,7 @@ export default function AdminDashboardPage() {
                   Relatórios
                 </span>
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
 

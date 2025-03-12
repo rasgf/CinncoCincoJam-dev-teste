@@ -36,6 +36,8 @@ export default function CoursePage() {
   const { airtableUser } = useAuthContext();
   const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
 
   // Função auxiliar para converter what_will_learn em array
   const getWhatWillLearn = (items?: string | string[]): string[] => {
@@ -83,6 +85,26 @@ export default function CoursePage() {
     router.push(`/learn/courses/${id}`);
   };
 
+  const handleBuyCourse = () => {
+    setShowPaymentModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowPaymentModal(false);
+    setSelectedPaymentMethod(null);
+  };
+
+  const handleSelectPaymentMethod = (method: string) => {
+    setSelectedPaymentMethod(method);
+  };
+
+  const handlePay = () => {
+    // In a real implementation, this would process the payment
+    // For now, we'll just close the modal and redirect to the course content
+    setShowPaymentModal(false);
+    router.push(`/learn/courses/${id}`);
+  };
+
   // Função para formatar as condições de pagamento
   const getPaymentInfo = () => {
     if (!course?.fields.price) return 'Grátis';
@@ -124,6 +146,176 @@ export default function CoursePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Opções de Pagamento
+              </h2>
+              <button 
+                onClick={handleCloseModal}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              <div 
+                className={`p-3 border rounded-lg cursor-pointer ${
+                  selectedPaymentMethod === 'pix_subscription' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+                onClick={() => handleSelectPaymentMethod('pix_subscription')}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    selectedPaymentMethod === 'pix_subscription' 
+                      ? 'border-blue-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {selectedPaymentMethod === 'pix_subscription' && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span className="font-medium">Assinar com PIX Recorrente</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                className={`p-3 border rounded-lg cursor-pointer ${
+                  selectedPaymentMethod === 'pix_onetime' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+                onClick={() => handleSelectPaymentMethod('pix_onetime')}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    selectedPaymentMethod === 'pix_onetime' 
+                      ? 'border-blue-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {selectedPaymentMethod === 'pix_onetime' && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span className="font-medium">Comprar à Vista com PIX</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                className={`p-3 border rounded-lg cursor-pointer ${
+                  selectedPaymentMethod === 'pix_installment' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+                onClick={() => handleSelectPaymentMethod('pix_installment')}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    selectedPaymentMethod === 'pix_installment' 
+                      ? 'border-blue-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {selectedPaymentMethod === 'pix_installment' && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span className="font-medium">Parcelar com PIX</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                className={`p-3 border rounded-lg cursor-pointer ${
+                  selectedPaymentMethod === 'card_installment' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+                onClick={() => handleSelectPaymentMethod('card_installment')}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    selectedPaymentMethod === 'card_installment' 
+                      ? 'border-blue-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {selectedPaymentMethod === 'card_installment' && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                    <span className="font-medium">Parcelar com Cartão</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                className={`p-3 border rounded-lg cursor-pointer ${
+                  selectedPaymentMethod === 'card_onetime' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+                onClick={() => handleSelectPaymentMethod('card_onetime')}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    selectedPaymentMethod === 'card_onetime' 
+                      ? 'border-blue-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {selectedPaymentMethod === 'card_onetime' && (
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <span className="font-medium">Pagar à Vista com Cartão</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <Button
+              onClick={handlePay}
+              disabled={!selectedPaymentMethod}
+              className={`w-full ${
+                selectedPaymentMethod 
+                  ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' 
+                  : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
+              }`}
+            >
+              Pagar
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -200,12 +392,20 @@ export default function CoursePage() {
                 )}
               </div>
 
-              <Button
-                onClick={handleStartCourse}
-                className="w-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600"
-              >
-                Começar Curso
-              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={handleBuyCourse}
+                  className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600"
+                >
+                  Comprar Curso
+                </Button>
+                <Button
+                  onClick={handleStartCourse}
+                  className="w-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600"
+                >
+                  Começar Curso
+                </Button>
+              </div>
             </div>
           </div>
         </div>

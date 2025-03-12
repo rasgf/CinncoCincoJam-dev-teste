@@ -59,8 +59,9 @@ export default function DashboardLayout({
   }
 
   const menuItems = [
-    { href: '/profile', label: 'Meu Perfil' },
+    { href: '/profile', label: 'Camarim' },
     { href: '/courses', label: 'Cursos' },
+    { href: '/apps-pro', label: 'Apps PRO' },
   ];
 
   return (
