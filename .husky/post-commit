@@ -1,6 +1,16 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Verifica se o último commit foi relacionado ao arquivo AI_CURSOR_RULES.md
+LAST_COMMIT_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD)
+LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+
+# Se o último commit contém o arquivo AI_CURSOR_RULES.md ou a mensagem contém "atualiza" e "guidelines", não executa o script
+if echo "$LAST_COMMIT_FILES" | grep -q "AI_CURSOR_RULES.md" || echo "$LAST_COMMIT_MSG" | grep -q -i "atualiza.*guidelines\|guidelines.*atualiza"; then
+  echo "🔄 Commit relacionado às diretrizes detectado. Pulando atualização automática para evitar loop."
+  exit 0
+fi
+
 # Atualiza o arquivo de diretrizes se houver novos commits relevantes
 if npm run update-guidelines 2>/dev/null; then
   echo "✅ Diretrizes atualizadas com sucesso"
