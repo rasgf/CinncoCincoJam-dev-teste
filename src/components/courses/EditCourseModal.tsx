@@ -235,6 +235,32 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
               </Dialog.Title>
             </div>
 
+            {/* Banner de Mentoria */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex items-center justify-between">
+              <div className="flex-1 pr-6">
+                <h3 className="text-xl font-bold mb-2">Precisa de apoio na sua jornada?</h3>
+                <p className="text-sm mb-4 opacity-80">
+                  Solicite o acompanhamento de um mentor especializado para impulsionar seus conteúdos e alcançar melhores resultados na plataforma.
+                </p>
+                <button 
+                  type="button" 
+                  className="bg-white text-blue-600 hover:bg-blue-50 font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  Solicitar Mentoria
+                </button>
+              </div>
+              <div className="w-1/3 flex items-center justify-center">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 200 200" 
+                  className="w-full h-auto text-white opacity-20"
+                  fill="currentColor"
+                >
+                  <path d="M100 20a80 80 0 1 0 0 160 80 80 0 1 0 0-160zm0 140a60 60 0 1 1 0-120 60 60 0 1 1 0 120zm-10-85a10 10 0 1 0 20 0 10 10 0 1 0-20 0zm0 50a10 10 0 1 0 20 0 10 10 0 1 0-20 0z"/>
+                </svg>
+              </div>
+            </div>
+
             {/* Content */}
             <div className="flex max-h-[calc(100vh-200px)] overflow-hidden">
               {/* Formulário do Curso */}

@@ -74,6 +74,12 @@ export default function ProfilePage() {
     }
   }, [firebaseUser]);
 
+  useEffect(() => {
+    if (!user) {
+      router.replace('/login');
+    }
+  }, [user, router]);
+
   const handleImageSelect = (file: File) => {
     setSelectedImage(file);
   };
