@@ -8,6 +8,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Configuração para o Vercel
+  output: 'standalone',
+  // Configuração para lidar com grupos de rotas com parênteses
+  experimental: {
+    serverComponentsExternalPackages: [],
+    optimizePackageImports: ['@heroicons/react', '@headlessui/react'],
+  },
   images: {
     remotePatterns: [
       {
