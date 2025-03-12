@@ -1,18 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { ImageUpload } from '@/components/common/ImageUpload';
-import { useAuthContext } from '@/contexts/AuthContext';
-import { getUserByUid, updateUser, deleteUser } from '@/services/firebase';
-import { deleteUser as deleteFirebaseUser } from 'firebase/auth';
 import { ReauthModal } from '@/components/auth/ReauthModal';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { storage } from '@/config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { UserIcon, EnvelopeIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
+import { 
+  UserIcon, 
+  EnvelopeIcon, 
+  AcademicCapIcon,
+  BanknotesIcon,
+  IdentificationIcon,
+  BuildingLibraryIcon
+} from '@heroicons/react/24/outline';
 import { updateProfile } from '@/services/users';
+import { getUserByUid, updateUser, deleteUser } from '@/services/firebase';
+import { deleteUser as deleteFirebaseUser } from 'firebase/auth';
 
 const getRoleDisplay = (role: string) => {
   switch (role) {
@@ -37,13 +45,17 @@ export default function ProfilePage() {
     email: '',
     role: '',
     bio: '',
-    specialties: [] as string[],
-    social_media: ''
+    bank_name: '',
+    bank_branch: '',
+    bank_account: '',
+    bank_account_type: 'checking',
+    bank_document: ''
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReauthModalOpen, setIsReauthModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const isTeacher = firebaseUser?.fields.role === 'professor';
 
   useEffect(() => {
@@ -53,8 +65,11 @@ export default function ProfilePage() {
         email: firebaseUser.fields.email || '',
         role: firebaseUser.fields.role || '',
         bio: firebaseUser.fields.bio || '',
-        specialties: firebaseUser.fields.specialties || [],
-        social_media: firebaseUser.fields.social_media || ''
+        bank_name: firebaseUser.fields.bank_name || '',
+        bank_branch: firebaseUser.fields.bank_branch || '',
+        bank_account: firebaseUser.fields.bank_account || '',
+        bank_account_type: firebaseUser.fields.bank_account_type || 'checking',
+        bank_document: firebaseUser.fields.bank_document || ''
       });
     }
   }, [firebaseUser]);
@@ -78,13 +93,27 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    console.log(`Campo alterado: ${name}, valor: ${value}`);
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     setError('');
     setSuccess('');
-    setIsLoading(true);
 
     try {
+      console.log('Enviando dados do formulário:', formData);
+      
+      // Preparar dados para atualização
       let imageUrl = firebaseUser?.fields.profile_image;
 
       if (selectedImage) {
@@ -94,40 +123,32 @@ export default function ProfilePage() {
           throw uploadError;
         }
       }
-
+      
       const updateData = {
         name: formData.name,
         profile_image: imageUrl,
         bio: formData.bio,
-        specialties: formData.specialties,
-        social_media: formData.social_media,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // Incluindo dados bancários na atualização
+        ...(isTeacher && {
+          bank_name: formData.bank_name,
+          bank_branch: formData.bank_branch,
+          bank_account: formData.bank_account,
+          bank_account_type: formData.bank_account_type,
+          bank_document: formData.bank_document
+        })
       };
-
+      
       await updateProfile(firebaseUser.id, updateData);
       await refreshUser();
       
       setSuccess('Perfil atualizado com sucesso!');
       setSelectedImage(null);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao atualizar perfil');
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      setError('Erro ao atualizar perfil. Tente novamente.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    if (name === 'specialties') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value.split(',').map(item => item.trim())
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
     }
   };
 
@@ -158,58 +179,44 @@ export default function ProfilePage() {
     }
   };
 
+  const handleChangePassword = () => {
+    setIsChangePasswordModalOpen(true);
+  };
+
   if (!user || !firebaseUser) {
     return null;
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Cabeçalho */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Meu Perfil</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Gerencie suas informações pessoais e preferências da conta
-          </p>
-        </div>
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">
+          Meu Perfil
+        </h1>
 
-        {/* Grid Principal */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Coluna da Esquerda - Foto e Informações Rápidas */}
+          {/* Coluna da Esquerda - Avatar */}
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-              <div className="mb-6">
-                <ImageUpload
-                  currentImage={firebaseUser.fields.profile_image}
-                  onImageSelect={handleImageSelect}
-                />
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Clique na imagem para alterar
-                </p>
-              </div>
-              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {formData.name}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {getRoleDisplay(formData.role)}
-              </p>
-            </div>
-
-            {/* Status da Conta */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
-                Status da Conta
-              </h3>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Status</span>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200">
-                  Ativo
-                </span>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Foto de Perfil
+              </h2>
+              <div className="flex flex-col items-center">
+                <div className="relative w-32 h-32 mb-4">
+                  <ImageUpload
+                    currentImage={firebaseUser?.fields.profile_image}
+                    onImageSelect={handleImageSelect}
+                    className="w-32 h-32 rounded-full object-cover"
+                  />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                  Clique na imagem para alterar sua foto de perfil
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Coluna da Direita - Formulário e Ações */}
+          {/* Coluna da Direita - Formulário */}
           <div className="md:col-span-2 space-y-6">
             {/* Mensagens de Feedback */}
             {error && (
@@ -283,22 +290,85 @@ export default function ProfilePage() {
                             className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
                           />
                         </div>
-
-                        <Input
-                          label="Especialidades"
-                          name="specialties"
-                          value={formData.specialties.join(', ')}
-                          onChange={handleChange}
-                          placeholder="Ex: React, Next.js, Node.js"
-                        />
-
-                        <Input
-                          label="Redes Sociais"
-                          name="social_media"
-                          value={formData.social_media}
-                          onChange={handleChange}
-                          placeholder="Links para suas redes sociais"
-                        />
+                        
+                        {/* Seção de Dados Bancários */}
+                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                            Dados Bancários para Recebimentos
+                          </h3>
+                          
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-3">
+                              <BuildingLibraryIcon className="h-5 w-5 text-gray-400" />
+                              <Input
+                                label="Nome do Banco"
+                                name="bank_name"
+                                type="text"
+                                value={formData.bank_name}
+                                onChange={handleChange}
+                                placeholder="Ex: Banco do Brasil, Nubank, etc."
+                              />
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <BanknotesIcon className="h-5 w-5 text-gray-400" />
+                              <div className="grid grid-cols-2 gap-4 w-full">
+                                <Input
+                                  label="Agência"
+                                  name="bank_branch"
+                                  type="text"
+                                  value={formData.bank_branch}
+                                  onChange={handleChange}
+                                  placeholder="Sem dígito"
+                                />
+                                <Input
+                                  label="Conta"
+                                  name="bank_account"
+                                  type="text"
+                                  value={formData.bank_account}
+                                  onChange={handleChange}
+                                  placeholder="Com dígito"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <div className="h-5 w-5" /> {/* Espaçador para alinhamento */}
+                              <div className="w-full">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                  Tipo de Conta
+                                </label>
+                                <select
+                                  name="bank_account_type"
+                                  value={formData.bank_account_type}
+                                  onChange={handleChange}
+                                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
+                                >
+                                  <option value="checking">Conta Corrente</option>
+                                  <option value="savings">Conta Poupança</option>
+                                  <option value="payment">Conta de Pagamento</option>
+                                </select>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <IdentificationIcon className="h-5 w-5 text-gray-400" />
+                              <Input
+                                label="CPF/CNPJ"
+                                name="bank_document"
+                                type="text"
+                                value={formData.bank_document}
+                                onChange={handleChange}
+                                placeholder="Apenas números"
+                              />
+                            </div>
+                            
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                              Estes dados serão utilizados apenas para processamento de pagamentos.
+                              Suas informações bancárias são armazenadas de forma segura.
+                            </p>
+                          </div>
+                        </div>
                       </>
                     )}
                   </div>
@@ -320,6 +390,23 @@ export default function ProfilePage() {
                 <h2 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4">
                   Zona de Perigo
                 </h2>
+                
+                {/* Alterar Senha */}
+                <div className="border-l-4 border-yellow-500 pl-4 py-2 mb-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Altere sua senha regularmente para manter sua conta segura.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleChangePassword}
+                    className="!bg-yellow-50 dark:!bg-yellow-900/50 !text-yellow-600 dark:!text-yellow-400 hover:!bg-yellow-100 dark:hover:!bg-yellow-900/70"
+                  >
+                    Alterar senha
+                  </Button>
+                </div>
+                
+                {/* Deletar Conta */}
                 <div className="border-l-4 border-red-500 pl-4 py-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Uma vez deletada, sua conta não poderá ser recuperada. Por favor, tenha certeza.
@@ -344,6 +431,12 @@ export default function ProfilePage() {
         isOpen={isReauthModalOpen}
         onClose={() => setIsReauthModalOpen(false)}
         onSuccess={handleConfirmedDelete}
+        user={user}
+      />
+      
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
         user={user}
       />
     </div>

@@ -1,8 +1,11 @@
 'use client';
 
+import React from 'react';
+import Image from 'next/image';
+import { PaymentType, RecurrenceInterval } from '@/types/course';
 import { ProxyImage } from '../common/ProxyImage';
 
-interface CourseCardProps {
+export interface CourseCardProps {
   title: string;
   description: string;
   thumbnail?: string;
@@ -13,35 +16,68 @@ interface CourseCardProps {
   status?: string;
   what_will_learn?: string;
   requirements?: string;
+  paymentType?: PaymentType;
+  recurrenceInterval?: RecurrenceInterval;
+  installments?: boolean;
+  installmentCount?: number;
 }
 
-export function CourseCard({ 
-  title, 
-  description, 
-  thumbnail, 
-  progress, 
+export default function CourseCard({
+  title,
+  description,
+  thumbnail,
+  progress,
   professor,
   price,
   level,
   status,
   what_will_learn,
-  requirements
+  requirements,
+  paymentType,
+  recurrenceInterval,
+  installments,
+  installmentCount
 }: CourseCardProps) {
   
-  const formatPrice = (price: number | undefined) => {
-    if (price === undefined) return '';
-    if (price === 0) return 'Grátis';
-    return `R$ ${Number(price).toFixed(2)}`;
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(price);
   };
 
-  const getArrayFromString = (value?: string): string[] => {
-    if (!value) return [];
-    return value.split(',').map(item => item.trim());
+  const getArrayFromString = (str?: string) => {
+    if (!str) return [];
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      return [str];
+    }
+  };
+
+  const formatPaymentInfo = () => {
+    if (price === undefined) return '';
+    
+    let paymentInfo = formatPrice(price);
+    
+    if (paymentType === 'recurring' && recurrenceInterval) {
+      const intervalMap: Record<RecurrenceInterval, string> = {
+        monthly: 'mensal',
+        quarterly: 'trimestral',
+        biannual: 'semestral',
+        annual: 'anual'
+      };
+      paymentInfo += ` ${intervalMap[recurrenceInterval]}`;
+    } else if (paymentType === 'one_time' && installments && installmentCount) {
+      paymentInfo += ` em até ${installmentCount}x`;
+    }
+    
+    return paymentInfo;
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700/20 overflow-hidden hover:shadow-lg dark:hover:shadow-gray-600/30 transition-shadow duration-200">
-      <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 transition-all hover:shadow-md">
+      <div className="relative h-48">
         {thumbnail ? (
           <ProxyImage
             src={thumbnail}
@@ -70,27 +106,12 @@ export function CourseCard({
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{description}</p>
         
         <div className="flex items-center justify-between">
-          {professor && (
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              Prof. {professor}
-            </span>
-          )}
           {price !== undefined && (
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {formatPrice(price)}
+              {formatPaymentInfo()}
             </span>
           )}
         </div>
-
-        {level && (
-          <div className="mt-2">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-              {level === 'beginner' ? 'Iniciante' :
-               level === 'intermediate' ? 'Intermediário' :
-               level === 'advanced' ? 'Avançado' : level}
-            </span>
-          </div>
-        )}
 
         {what_will_learn && (
           <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
@@ -98,7 +119,7 @@ export function CourseCard({
               O que você vai aprender:
             </h4>
             <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-              {getArrayFromString(what_will_learn).map((item, index) => (
+              {getArrayFromString(what_will_learn).map((item: string, index: number) => (
                 <li key={index} className="flex items-center">
                   <span className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full mr-2" />
                   {item}
@@ -114,7 +135,7 @@ export function CourseCard({
               Pré-requisitos:
             </h4>
             <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-              {getArrayFromString(requirements).map((item, index) => (
+              {getArrayFromString(requirements).map((item: string, index: number) => (
                 <li key={index} className="flex items-center">
                   <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full mr-2" />
                   {item}

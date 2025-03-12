@@ -9,6 +9,8 @@ export interface VideoContent {
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseStatus = 'draft' | 'published' | 'archived';
+export type PaymentType = 'one_time' | 'recurring';
+export type RecurrenceInterval = 'monthly' | 'quarterly' | 'biannual' | 'annual';
 
 export interface Course {
   id: string;
@@ -25,6 +27,10 @@ export interface Course {
     category?: string;
     created_at?: string;
     updated_at?: string;
+    paymentType?: PaymentType;
+    recurrenceInterval?: RecurrenceInterval;
+    installments?: boolean;
+    installmentCount?: number;
   };
 }
 
@@ -49,10 +55,16 @@ export interface CreateCourseData {
   price: number;
   level: CourseLevel | string;
   status: CourseStatus | string;
+  category?: string;
   thumbnail: File | null;
-  what_will_learn: string;
-  requirements: string;
+  what_will_learn: string[] | string;
+  requirements: string[] | string;
   professor_id: string;
+  contents?: VideoContent[];
+  paymentType: PaymentType;
+  recurrenceInterval?: RecurrenceInterval;
+  installments?: boolean;
+  installmentCount?: number;
 }
 
 export interface ProfessorStats {

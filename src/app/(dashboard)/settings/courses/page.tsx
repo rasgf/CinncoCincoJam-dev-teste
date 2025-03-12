@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { CourseCard } from '@/components/courses/CourseCard';
+import CourseCard from '@/components/courses/CourseCard';
 import { Button } from '@/components/common/Button';
 import { CourseModal } from '@/components/courses/CourseModal';
 import { getUserCourses, createCourse } from '@/services/firebase-courses';
-import { Course, CourseLevel, CourseStatus } from '@/types/course';
+import { Course as CourseType, CourseLevel, CourseStatus, PaymentType, RecurrenceInterval } from '@/types/course';
 
 interface Course {
   id: string;
@@ -20,6 +20,10 @@ interface Course {
     professor_id: string;
     what_will_learn: string[];
     requirements: string[];
+    paymentType?: PaymentType;
+    recurrenceInterval?: RecurrenceInterval;
+    installments?: boolean;
+    installmentCount?: number;
   };
 }
 
@@ -111,6 +115,10 @@ export default function ManageCoursesPage() {
                 status={course.fields.status}
                 what_will_learn={course.fields.what_will_learn}
                 requirements={course.fields.requirements}
+                paymentType={course.fields.paymentType}
+                recurrenceInterval={course.fields.recurrenceInterval}
+                installments={course.fields.installments}
+                installmentCount={course.fields.installmentCount}
               />
               <div className="absolute top-2 right-2">
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${

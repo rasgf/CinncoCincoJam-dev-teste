@@ -2,27 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { CourseCard } from '@/components/courses/CourseCard';
+import CourseCard from '@/components/courses/CourseCard';
 import { Button } from '@/components/common/Button';
 import { CourseModal } from '@/components/courses/CourseModal';
 import { getUserCourses, createCourse, updateCourse, deleteCourse } from '@/services/firebase-courses';
 import { EditCourseModal } from '@/components/courses/EditCourseModal';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
-import type { CreateCourseData } from '@/types/course';
-
-interface Course {
-  id: string;
-  fields: {
-    title: string;
-    description: string;
-    price: number;
-    category: string;
-    level: string;
-    status: string;
-    thumbnail?: string;
-  };
-}
+import type { CreateCourseData, PaymentType, RecurrenceInterval, Course } from '@/types/course';
 
 export default function ManageCoursesPage() {
   const { airtableUser } = useAuthContext();
@@ -56,7 +43,8 @@ export default function ManageCoursesPage() {
   const handleCreateCourse = async (courseData: CreateCourseData) => {
     try {
       await createCourse(courseData);
-      router.push('/dashboard');
+      await loadCourses(); // Recarregar a lista de cursos
+      setIsModalOpen(false); // Fechar o modal
     } catch (error: unknown) {
       console.error('Erro ao criar curso:', error);
       setError('Erro ao criar curso. Tente novamente.');
@@ -67,10 +55,26 @@ export default function ManageCoursesPage() {
     if (!airtableUser) return;
     
     try {
-      await updateCourse(courseData.id, {
+      console.log('ManageCoursesPage - handleEditCourse - Dados recebidos:', courseData);
+      
+      // Verificar se os campos de pagamento estão presentes
+      console.log('ManageCoursesPage - handleEditCourse - Campos de pagamento:', {
+        paymentType: courseData.paymentType,
+        recurrenceInterval: courseData.recurrenceInterval,
+        installments: courseData.installments,
+        installmentCount: courseData.installmentCount
+      });
+      
+      const dataToUpdate = {
         ...courseData,
         professor_id: airtableUser.id
-      });
+      };
+      
+      console.log('ManageCoursesPage - handleEditCourse - Dados a serem enviados para updateCourse:', dataToUpdate);
+      
+      await updateCourse(courseData.id, dataToUpdate);
+      console.log('ManageCoursesPage - handleEditCourse - Curso atualizado com sucesso');
+      
       await loadCourses();
       setIsEditModalOpen(false);
     } catch (error) {
@@ -156,6 +160,10 @@ export default function ManageCoursesPage() {
                 thumbnail={course.fields.thumbnail}
                 price={course.fields.price}
                 level={course.fields.level}
+                paymentType={course.fields.paymentType}
+                recurrenceInterval={course.fields.recurrenceInterval}
+                installments={course.fields.installments}
+                installmentCount={course.fields.installmentCount}
               />
 
               {/* Status Badge */}

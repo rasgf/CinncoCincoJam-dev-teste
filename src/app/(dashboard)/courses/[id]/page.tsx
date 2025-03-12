@@ -17,11 +17,15 @@ interface CourseFields {
   price?: number;
   status?: string;
   level?: string;
-  professor?: string;
+  professor_id?: string;
   requirements?: string | string[];
+  paymentType?: 'one_time' | 'recurring';
+  recurrenceInterval?: 'monthly' | 'quarterly' | 'biannual' | 'annual';
+  installments?: boolean;
+  installmentCount?: number;
 }
 
-interface Course {
+interface CourseData {
   id: string;
   fields: CourseFields;
 }
@@ -30,7 +34,7 @@ export default function CoursePage() {
   const { id } = useParams();
   const router = useRouter();
   const { airtableUser } = useAuthContext();
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Função auxiliar para converter what_will_learn em array
@@ -47,7 +51,9 @@ export default function CoursePage() {
   const loadCourse = async () => {
     try {
       setLoading(true);
+      console.log('Carregando curso com ID:', id);
       const data = await getCourseById(id as string);
+      console.log('Dados do curso carregados:', data);
       // Precisamos fazer um cast ou transformação dos dados
       setCourse({
         id: data.id,
@@ -59,8 +65,11 @@ export default function CoursePage() {
           price: data.fields.price as number | undefined,
           status: data.fields.status as string | undefined,
           level: data.fields.level as string | undefined,
-          professor: data.fields.professor as string | undefined,
-          requirements: data.fields.requirements as string | string[] | undefined
+          requirements: data.fields.requirements as string | string[] | undefined,
+          paymentType: data.fields.paymentType,
+          recurrenceInterval: data.fields.recurrenceInterval,
+          installments: data.fields.installments,
+          installmentCount: data.fields.installmentCount
         }
       });
     } catch (error) {
@@ -72,6 +81,33 @@ export default function CoursePage() {
 
   const handleStartCourse = () => {
     router.push(`/learn/courses/${id}`);
+  };
+
+  // Função para formatar as condições de pagamento
+  const getPaymentInfo = () => {
+    if (!course?.fields.price) return 'Grátis';
+    
+    const price = `R$ ${course.fields.price.toFixed(2)}`;
+    
+    if (course.fields.paymentType === 'recurring' && course.fields.recurrenceInterval) {
+      const interval = {
+        monthly: 'mensal',
+        quarterly: 'trimestral',
+        biannual: 'semestral',
+        annual: 'anual'
+      }[course.fields.recurrenceInterval];
+      
+      return `${price} ${interval}`;
+    }
+    
+    if (course.fields.paymentType === 'one_time') {
+      if (course.fields.installments && course.fields.installmentCount) {
+        return `${price} em até ${course.fields.installmentCount}x`;
+      }
+      return `${price} à vista`;
+    }
+    
+    return price;
   };
 
   if (loading) {
@@ -154,20 +190,11 @@ export default function CoursePage() {
 
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Nível do curso</p>
-                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    {course.fields.level}
-                  </p>
-                </div>
                 {course.fields.price !== undefined && (
-                  <div className="text-right">
+                  <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Investimento</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {course.fields.price === 0 
-                        ? 'Grátis' 
-                        : `R$ ${course.fields.price.toFixed(2)}`
-                      }
+                      {getPaymentInfo()}
                     </p>
                   </div>
                 )}
@@ -201,17 +228,6 @@ export default function CoursePage() {
               <span className="text-gray-400 dark:text-gray-500">
                 Imagem não disponível
               </span>
-            </div>
-          )}
-
-          {course.fields.professor && (
-            <div className="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Professor
-              </h3>
-              <p className="mt-1 text-lg font-medium text-gray-900 dark:text-gray-100">
-                {course.fields.professor}
-              </p>
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CourseCard } from '@/components/courses/CourseCard';
+import CourseCard from '@/components/courses/CourseCard';
 import { getAllPublishedCourses } from '@/services/firebase-courses';
 import { Course } from '@/types/course';
 
@@ -96,6 +96,10 @@ export default function CoursesPage() {
                 thumbnail={course.fields.thumbnail}
                 price={course.fields.price}
                 level={course.fields.level}
+                paymentType={course.fields.paymentType}
+                recurrenceInterval={course.fields.recurrenceInterval}
+                installments={course.fields.installments}
+                installmentCount={course.fields.installmentCount}
               />
             </div>
           ))}
@@ -117,7 +121,28 @@ export default function CoursesPage() {
                 </p>
               </div>
               <div className="ml-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                R$ {course.fields.price.toFixed(2)}
+                {course.fields.price ? (
+                  <>
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(course.fields.price)}
+                    {course.fields.paymentType === 'recurring' && course.fields.recurrenceInterval && (
+                      <span className="ml-1 text-xs text-gray-500">
+                        /{course.fields.recurrenceInterval === 'monthly' ? 'mês' : 
+                          course.fields.recurrenceInterval === 'quarterly' ? 'trimestre' :
+                          course.fields.recurrenceInterval === 'biannual' ? 'semestre' : 'ano'}
+                      </span>
+                    )}
+                    {course.fields.paymentType === 'one_time' && course.fields.installments && course.fields.installmentCount && (
+                      <span className="ml-1 text-xs text-gray-500">
+                        em até {course.fields.installmentCount}x
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  'Gratuito'
+                )}
               </div>
             </div>
           ))}

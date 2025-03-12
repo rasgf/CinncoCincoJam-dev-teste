@@ -1,13 +1,15 @@
 import { getDatabase, ref, set, get, update, remove, query, orderByChild, equalTo, push } from 'firebase/database';
 import { storage } from '@/config/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Course, CreateCourseData, ProfessorStats } from '@/types/course';
+import { Course, CreateCourseData, ProfessorStats, VideoContent, PaymentType, RecurrenceInterval } from '@/types/course';
 import { collections } from './firebase';
 
 const db = getDatabase();
 
 export const getUserCourses = async (userId: string): Promise<Course[]> => {
   try {
+    console.log('getUserCourses - Buscando cursos para o usuário:', userId);
+    
     // Buscar todos os cursos e filtrar no cliente para evitar necessidade de índice
     const coursesRef = ref(db, collections.courses);
     const snapshot = await get(coursesRef);
@@ -19,6 +21,8 @@ export const getUserCourses = async (userId: string): Promise<Course[]> => {
         
         // Filtrar cursos pelo professor_id
         if (courseData.professor_id === userId) {
+          console.log('getUserCourses - Dados do curso encontrado:', JSON.stringify(courseData, null, 2));
+          
           courses.push({
             id: childSnapshot.key as string,
             fields: {
@@ -33,13 +37,19 @@ export const getUserCourses = async (userId: string): Promise<Course[]> => {
               requirements: courseData.requirements,
               professor_id: courseData.professor_id,
               created_at: courseData.created_at,
-              updated_at: courseData.updated_at
+              updated_at: courseData.updated_at,
+              // Incluir campos de pagamento
+              paymentType: courseData.paymentType,
+              recurrenceInterval: courseData.recurrenceInterval,
+              installments: courseData.installments,
+              installmentCount: courseData.installmentCount
             }
           });
         }
       });
     }
     
+    console.log('getUserCourses - Total de cursos encontrados:', courses.length);
     return courses;
   } catch (error: unknown) {
     console.error('Erro ao buscar cursos do usuário:', error);
@@ -133,14 +143,26 @@ interface CreateCourseFields {
   price: number;
   level: string;
   status: string;
+  category?: string;
   thumbnail: File | null;
-  what_will_learn: string;
-  requirements: string;
+  what_will_learn: string | string[];
+  requirements: string | string[];
   professor_id: string;
+  contents?: VideoContent[];
+  paymentType: PaymentType;
+  recurrenceInterval?: RecurrenceInterval;
+  installments?: boolean;
+  installmentCount?: number;
 }
 
 export const createCourse = async (data: CreateCourseFields): Promise<Course> => {
   try {
+    console.log('createCourse - Iniciando criação de curso com dados:', JSON.stringify({
+      ...data,
+      thumbnail: data.thumbnail ? 'File object' : null,
+      contents: data.contents ? `${data.contents.length} conteúdos` : 'nenhum conteúdo'
+    }, null, 2));
+    
     let thumbnailUrl = '';
     
     if (data.thumbnail) {
@@ -162,31 +184,114 @@ export const createCourse = async (data: CreateCourseFields): Promise<Course> =>
 
     const formattedDate = new Date().toISOString().split('T')[0];
 
-    const courseFields = {
+    // Campos base do curso
+    const courseFields: {
+      title: string;
+      description: string;
+      price: number;
+      level: string;
+      status: string;
+      category: string;
+      thumbnail: string;
+      what_will_learn: string;
+      requirements: string;
+      professor_id: string;
+      created_at: string;
+      updated_at: string;
+      paymentType: PaymentType;
+      recurrenceInterval?: RecurrenceInterval;
+      installments?: boolean;
+      installmentCount?: number;
+      [key: string]: any; // Adicionar assinatura de índice para permitir acesso dinâmico
+    } = {
       title: data.title,
       description: data.description,
       price: Number(data.price),
       level: data.level,
       status: data.status,
+      category: data.category || '',
       thumbnail: thumbnailUrl,
       what_will_learn: whatWillLearn,
       requirements: requirements,
       professor_id: data.professor_id,
       created_at: formattedDate,
-      updated_at: formattedDate
+      updated_at: formattedDate,
+      // Sempre incluir o tipo de pagamento
+      paymentType: data.paymentType,
     };
+
+    // Adicionar campos específicos com base no tipo de pagamento
+    if (data.paymentType === 'recurring') {
+      if (data.recurrenceInterval) {
+        courseFields.recurrenceInterval = data.recurrenceInterval;
+      }
+    } else if (data.paymentType === 'one_time') {
+      courseFields.installments = data.installments || false;
+      if (data.installments && data.installmentCount) {
+        courseFields.installmentCount = data.installmentCount;
+      }
+    }
+
+    // Remover quaisquer campos undefined que possam ter sido adicionados
+    Object.keys(courseFields).forEach(key => {
+      if (courseFields[key] === undefined) {
+        delete courseFields[key];
+      }
+    });
+
+    console.log('createCourse - Campos do curso a serem salvos:', JSON.stringify(courseFields, null, 2));
 
     // Criar um novo ID único para o curso
     const coursesRef = ref(db, collections.courses);
     const newCourseRef = push(coursesRef);
     const courseId = newCourseRef.key;
-    
-    // Salvar o curso no Firebase
-    await set(newCourseRef, courseFields);
 
+    if (!courseId) {
+      throw new Error('Falha ao gerar ID para o curso');
+    }
+
+    // Salvar o curso
+    await set(newCourseRef, courseFields);
+    console.log('createCourse - Curso salvo com sucesso, ID:', courseId);
+
+    // Se houver conteúdos, salvá-los
+    if (data.contents && data.contents.length > 0) {
+      console.log('createCourse - Salvando conteúdos do curso:', JSON.stringify(data.contents, null, 2));
+      
+      const courseContentsRef = ref(db, `${collections.course_contents}/${courseId}`);
+      
+      // Garantir que todos os conteúdos tenham um ID válido
+      const formattedContents = data.contents.map((content, index) => {
+        // Se for um ID temporário, criar um novo
+        const id = content.id.startsWith('temp_') ? `video-${Date.now()}-${index}` : content.id;
+        
+        return {
+          ...content,
+          id,
+          order: content.order !== undefined ? content.order : index
+        };
+      });
+      
+      // Salvar como um objeto com IDs como chaves para facilitar atualizações individuais
+      const contentsObject: Record<string, any> = {};
+      formattedContents.forEach(content => {
+        const { id, ...contentData } = content;
+        contentsObject[id] = contentData;
+      });
+      
+      // Salvar os conteúdos
+      await set(courseContentsRef, contentsObject);
+      console.log('createCourse - Conteúdos do curso salvos com sucesso');
+    } else {
+      console.log('createCourse - Nenhum conteúdo para salvar');
+    }
+
+    // Retornar o curso criado
     return {
-      id: courseId as string,
-      fields: courseFields
+      id: courseId,
+      fields: {
+        ...courseFields
+      }
     };
   } catch (error: unknown) {
     console.error('Erro ao criar curso:', error);
@@ -196,6 +301,8 @@ export const createCourse = async (data: CreateCourseFields): Promise<Course> =>
 
 export const getAllPublishedCourses = async (): Promise<Course[]> => {
   try {
+    console.log('getAllPublishedCourses - Buscando todos os cursos publicados');
+    
     const coursesRef = ref(db, collections.courses);
     const snapshot = await get(coursesRef);
     
@@ -208,7 +315,16 @@ export const getAllPublishedCourses = async (): Promise<Course[]> => {
         if (courseData.status === 'published') {
           courses.push({
             id: childSnapshot.key as string,
-            fields: courseData
+            fields: {
+              ...courseData,
+              // Garantir que todos os campos estejam presentes
+              category: courseData.category || '',
+              // Incluir campos de pagamento
+              paymentType: courseData.paymentType,
+              recurrenceInterval: courseData.recurrenceInterval,
+              installments: courseData.installments,
+              installmentCount: courseData.installmentCount
+            }
           });
         }
       });
@@ -221,6 +337,7 @@ export const getAllPublishedCourses = async (): Promise<Course[]> => {
       return dateB - dateA;
     });
     
+    console.log('getAllPublishedCourses - Total de cursos publicados encontrados:', courses.length);
     return courses;
   } catch (error) {
     console.error('Erro ao buscar cursos publicados:', error);
@@ -237,8 +354,18 @@ export const updateCourse = async (courseId: string, courseData: {
   status: string;
   thumbnail: File | null;
   professor_id: string;
+  paymentType: PaymentType;
+  recurrenceInterval?: RecurrenceInterval;
+  installments?: boolean;
+  installmentCount?: number;
 }) => {
   try {
+    console.log('updateCourse - Iniciando atualização do curso:', courseId);
+    console.log('updateCourse - Dados recebidos:', JSON.stringify({
+      ...courseData,
+      thumbnail: courseData.thumbnail ? 'File object' : null
+    }, null, 2));
+    
     let thumbnailUrl = '';
     
     if (courseData.thumbnail) {
@@ -248,6 +375,7 @@ export const updateCourse = async (courseId: string, courseData: {
       
       await uploadBytes(storagePath, courseData.thumbnail);
       thumbnailUrl = await getDownloadURL(storagePath);
+      console.log('updateCourse - Thumbnail atualizada:', thumbnailUrl);
     }
 
     const formattedDate = new Date().toISOString().split('T')[0];
@@ -261,10 +389,19 @@ export const updateCourse = async (courseId: string, courseData: {
     }
     
     const currentCourseData = snapshot.val();
+    console.log('updateCourse - Dados atuais do curso:', JSON.stringify(currentCourseData, null, 2));
+
+    // Primeiro, remover campos de pagamento existentes para evitar conflitos
+    const cleanedCurrentData = { ...currentCourseData };
+    ['paymentType', 'recurrenceInterval', 'installments', 'installmentCount'].forEach(field => {
+      if (field in cleanedCurrentData) {
+        delete cleanedCurrentData[field];
+      }
+    });
 
     // Garantir que não haja valores undefined
     const updatedFields = {
-      ...currentCourseData,
+      ...cleanedCurrentData,
       title: courseData.title || '',
       description: courseData.description || '',
       price: parseFloat(courseData.price) || 0,
@@ -273,16 +410,40 @@ export const updateCourse = async (courseId: string, courseData: {
       level: courseData.level || '',
       status: courseData.status || 'draft',
       professor_id: courseData.professor_id || currentCourseData.professor_id,
-      updated_at: formattedDate
+      updated_at: formattedDate,
+      // Sempre incluir o tipo de pagamento
+      paymentType: courseData.paymentType || 'one_time',
     };
+
+    // Adicionar campos específicos com base no tipo de pagamento
+    if (courseData.paymentType === 'recurring') {
+      if (courseData.recurrenceInterval) {
+        updatedFields.recurrenceInterval = courseData.recurrenceInterval;
+      }
+    } else if (courseData.paymentType === 'one_time') {
+      updatedFields.installments = courseData.installments || false;
+      if (courseData.installments && courseData.installmentCount) {
+        updatedFields.installmentCount = courseData.installmentCount;
+      }
+    }
 
     // Adicionar thumbnail apenas se houver uma nova
     if (thumbnailUrl) {
       updatedFields.thumbnail = thumbnailUrl;
     }
 
+    // Remover quaisquer campos undefined que possam ter sido adicionados
+    Object.keys(updatedFields).forEach(key => {
+      if (updatedFields[key] === undefined) {
+        delete updatedFields[key];
+      }
+    });
+
+    console.log('updateCourse - Campos atualizados a serem enviados:', JSON.stringify(updatedFields, null, 2));
+
     // Atualizar o curso no Firebase
     await update(courseRef, updatedFields);
+    console.log('updateCourse - Curso atualizado com sucesso:', courseId);
 
     return {
       id: courseId,
@@ -296,6 +457,8 @@ export const updateCourse = async (courseId: string, courseData: {
 
 export const getCourseById = async (id: string): Promise<Course> => {
   try {
+    console.log('getCourseById - Buscando curso com ID:', id);
+    
     const courseRef = ref(db, `${collections.courses}/${id}`);
     const snapshot = await get(courseRef);
     
@@ -304,6 +467,7 @@ export const getCourseById = async (id: string): Promise<Course> => {
     }
     
     const courseData = snapshot.val();
+    console.log('getCourseById - Dados do curso encontrado:', JSON.stringify(courseData, null, 2));
     
     return {
       id: id,
@@ -319,7 +483,12 @@ export const getCourseById = async (id: string): Promise<Course> => {
         professor_id: courseData.professor_id,
         category: courseData.category || '',
         created_at: courseData.created_at,
-        updated_at: courseData.updated_at
+        updated_at: courseData.updated_at,
+        // Incluir campos de pagamento
+        paymentType: courseData.paymentType,
+        recurrenceInterval: courseData.recurrenceInterval,
+        installments: courseData.installments,
+        installmentCount: courseData.installmentCount
       }
     };
   } catch (error) {
@@ -361,6 +530,8 @@ export const deleteCourse = async (courseId: string) => {
 
 export const getAllCourses = async (): Promise<Course[]> => {
   try {
+    console.log('getAllCourses - Buscando todos os cursos');
+    
     const coursesRef = ref(db, collections.courses);
     const snapshot = await get(coursesRef);
     
@@ -370,7 +541,16 @@ export const getAllCourses = async (): Promise<Course[]> => {
         const courseData = childSnapshot.val();
         courses.push({
           id: childSnapshot.key as string,
-          fields: courseData
+          fields: {
+            ...courseData,
+            // Garantir que todos os campos estejam presentes
+            category: courseData.category || '',
+            // Incluir campos de pagamento
+            paymentType: courseData.paymentType,
+            recurrenceInterval: courseData.recurrenceInterval,
+            installments: courseData.installments,
+            installmentCount: courseData.installmentCount
+          }
         });
       });
     }
@@ -382,6 +562,7 @@ export const getAllCourses = async (): Promise<Course[]> => {
       return dateB - dateA;
     });
     
+    console.log('getAllCourses - Total de cursos encontrados:', courses.length);
     return courses;
   } catch (error) {
     console.error('Erro ao buscar todos os cursos:', error);

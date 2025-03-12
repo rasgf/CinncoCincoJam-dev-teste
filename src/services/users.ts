@@ -6,8 +6,6 @@ const db = getDatabase();
 export const updateProfile = async (userId: string, data: {
   name: string;
   bio?: string;
-  specialties?: string[];
-  social_media?: string;
   profile_image?: string;
   updated_at: string;
 }) => {
@@ -17,8 +15,6 @@ export const updateProfile = async (userId: string, data: {
     const updateData = {
       name: data.name,
       ...(data.bio && { bio: data.bio }),
-      ...(data.specialties && { specialties: data.specialties }),
-      ...(data.social_media && { social_media: data.social_media }),
       ...(data.profile_image && { profile_image: data.profile_image }),
       updated_at: new Date().toISOString()
     };

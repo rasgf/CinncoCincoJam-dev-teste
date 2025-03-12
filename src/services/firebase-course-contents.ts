@@ -6,42 +6,34 @@ const db = getDatabase();
 
 export const getCourseContents = async (courseId: string): Promise<VideoContent[]> => {
   try {
-    const contentsRef = ref(db, `${collections.course_contents}/${courseId}`);
-    const snapshot = await get(contentsRef);
+    console.log('getCourseContents - Iniciando busca de conteúdos para o curso:', courseId);
     
-    const contents: VideoContent[] = [];
+    const courseContentsRef = ref(db, `${collections.course_contents}/${courseId}`);
+    const snapshot = await get(courseContentsRef);
     
-    if (snapshot.exists()) {
-      // Se tivermos um array de vídeos
-      if (Array.isArray(snapshot.val())) {
-        snapshot.val().forEach((content: VideoContent, index: number) => {
-          if (content) {
-            contents.push({
-              ...content,
-              id: content.id || `video-${index}`,
-              order: content.order || index
-            });
-          }
-        });
-      } else {
-        // Se tivermos um objeto com ids como chaves
-        Object.entries(snapshot.val()).forEach(([key, value]: [string, any]) => {
-          contents.push({
-            ...value,
-            id: key,
-            order: value.order || 0
-          });
-        });
-      }
-      
-      // Ordenar por ordem
-      contents.sort((a, b) => a.order - b.order);
+    if (!snapshot.exists()) {
+      console.log('getCourseContents - Nenhum conteúdo encontrado para o curso:', courseId);
+      return [];
     }
     
-    return contents;
+    const contentsData = snapshot.val();
+    console.log('getCourseContents - Dados brutos de conteúdos:', JSON.stringify(contentsData, null, 2));
+    
+    // Converter o objeto em um array
+    const contentsArray: VideoContent[] = Object.entries(contentsData).map(([id, data]: [string, any]) => ({
+      id,
+      ...data
+    }));
+    
+    // Ordenar por ordem
+    contentsArray.sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    console.log('getCourseContents - Conteúdos formatados:', JSON.stringify(contentsArray, null, 2));
+    
+    return contentsArray;
   } catch (error) {
     console.error('Erro ao buscar conteúdos do curso:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -88,8 +80,19 @@ export const addCourseContent = async (courseId: string, content: Omit<VideoCont
 
 export const updateCourseContents = async (courseId: string, contents: VideoContent[]) => {
   try {
+    console.log('Iniciando updateCourseContents para o curso:', courseId);
+    console.log('Conteúdos recebidos:', JSON.stringify(contents, null, 2));
+    
     // Referência para os conteúdos do curso
     const courseContentsRef = ref(db, `${collections.course_contents}/${courseId}`);
+    
+    // Se não houver conteúdos, remover todos os conteúdos existentes
+    if (contents.length === 0) {
+      console.log('Nenhum conteúdo recebido. Removendo todos os conteúdos existentes para o curso:', courseId);
+      await remove(courseContentsRef);
+      console.log('Todos os conteúdos removidos com sucesso para o curso:', courseId);
+      return true;
+    }
     
     // Garantir que todos os conteúdos tenham um ID válido
     const formattedContents = contents.map((content, index) => {
@@ -103,6 +106,8 @@ export const updateCourseContents = async (courseId: string, contents: VideoCont
       };
     });
     
+    console.log('Conteúdos formatados:', JSON.stringify(formattedContents, null, 2));
+    
     // Salvar como um objeto com IDs como chaves para facilitar atualizações individuais
     const contentsObject: Record<string, any> = {};
     formattedContents.forEach(content => {
@@ -110,8 +115,11 @@ export const updateCourseContents = async (courseId: string, contents: VideoCont
       contentsObject[id] = contentData;
     });
     
+    console.log('Objeto de conteúdos a ser salvo:', JSON.stringify(contentsObject, null, 2));
+    
     // Atualizar tudo de uma vez
     await set(courseContentsRef, contentsObject);
+    console.log('Conteúdos atualizados com sucesso para o curso:', courseId);
     
     return true;
   } catch (error) {

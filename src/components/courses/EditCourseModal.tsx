@@ -8,7 +8,7 @@ import { ImageUpload } from '@/components/common/ImageUpload';
 import { CourseContentManager } from './CourseContentManager';
 import { getCourseContents, updateCourseContents } from '@/services/firebase-course-contents';
 import { EyeIcon, EyeSlashIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline';
-import { VideoContent } from '@/types/course';
+import { VideoContent, PaymentType, RecurrenceInterval } from '@/types/course';
 
 interface EditCourseModalProps {
   isOpen: boolean;
@@ -20,70 +20,93 @@ interface EditCourseModalProps {
       title: string;
       description: string;
       price: number;
-      category: string;
+      category?: string;
       level: string;
       status: string;
       thumbnail?: string;
+      paymentType?: PaymentType;
+      recurrenceInterval?: RecurrenceInterval;
+      installments?: boolean;
+      installmentCount?: number;
+      professor_id?: string;
     };
   };
 }
 
 export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseModalProps) {
+  console.log('EditCourseModal - Inicializando com dados do curso:', course);
+  console.log('EditCourseModal - Campos de pagamento do curso:', {
+    paymentType: course.fields.paymentType,
+    recurrenceInterval: course.fields.recurrenceInterval,
+    installments: course.fields.installments,
+    installmentCount: course.fields.installmentCount
+  });
+  
   const [formData, setFormData] = useState({
     title: course.fields.title,
     description: course.fields.description,
     price: course.fields.price.toString(),
+    category: course.fields.category || '',
     level: course.fields.level,
     status: course.fields.status,
-    category: course.fields.category || '',
-    thumbnail: null as File | null
+    paymentType: course.fields.paymentType || 'one_time' as PaymentType,
+    recurrenceInterval: course.fields.recurrenceInterval as RecurrenceInterval | undefined,
+    installments: course.fields.installments || false,
+    installmentCount: course.fields.installmentCount || 2
   });
+  
+  console.log('EditCourseModal - Estado formData inicializado:', formData);
+  
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [contents, setContents] = useState<VideoContent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [contents, setContents] = useState<VideoContent[]>([]);
+  const [activeTab, setActiveTab] = useState<'info' | 'content'>('info');
 
-  // Carregar conteúdos quando o modal abrir
   useEffect(() => {
-    const loadContents = async () => {
-      try {
-        console.log('Carregando conteúdos para o curso:', course.id); // Debug
-        const data = await getCourseContents(course.id);
-        console.log('Conteúdos carregados:', data); // Debug
-        setContents(data);
-      } catch (error) {
-        console.error('Erro ao carregar conteúdos:', error);
-        setError('Erro ao carregar conteúdos do curso');
-      }
-    };
-
+    // Carregar conteúdos do curso quando o modal for aberto
     if (isOpen) {
-      loadContents();
+      loadCourseContents();
     }
   }, [isOpen, course.id]);
 
-  const handleSaveContents = async (newContents: VideoContent[]) => {
+  const loadCourseContents = async () => {
     try {
-      await updateCourseContents(course.id, newContents);
-      // setContents(newContents);
-      alert('Conteúdo salvo com sucesso!');
+      console.log('EditCourseModal - loadCourseContents - Carregando conteúdos para o curso:', course.id);
+      
+      const courseContents = await getCourseContents(course.id);
+      console.log('EditCourseModal - loadCourseContents - Conteúdos carregados:', courseContents);
+      console.log('EditCourseModal - loadCourseContents - Quantidade de conteúdos:', courseContents.length);
+      
+      setContents(courseContents);
     } catch (error) {
-      console.error('Erro ao salvar conteúdos:', error);
-      throw error;
+      console.error('Erro ao carregar conteúdos do curso:', error);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => {
+        const newState = { ...prev, [name]: checked };
+        console.log(`EditCourseModal - handleChange - Campo ${name} atualizado para:`, checked);
+        console.log('EditCourseModal - handleChange - Novo estado:', newState);
+        return newState;
+      });
+    } else {
+      setFormData(prev => {
+        const newState = { ...prev, [name]: value };
+        console.log(`EditCourseModal - handleChange - Campo ${name} atualizado para:`, value);
+        console.log('EditCourseModal - handleChange - Novo estado:', newState);
+        return newState;
+      });
+    }
   };
 
   const handleImageSelect = (file: File) => {
-    setFormData(prev => ({
-      ...prev,
-      thumbnail: file
-    }));
+    setSelectedImage(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,10 +115,57 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
     setError('');
 
     try {
-      await onSave({ ...formData, id: course.id });
+      // Validar preço
+      const priceNumber = Number(formData.price);
+      if (isNaN(priceNumber) || priceNumber < 0) {
+        throw new Error('Preço inválido');
+      }
+
+      console.log('EditCourseModal - handleSubmit - Dados do formulário:', formData);
+      console.log('EditCourseModal - handleSubmit - Conteúdos a serem salvos:', contents);
+
+      const courseData = {
+        id: course.id,
+        title: formData.title,
+        description: formData.description,
+        price: formData.price.toString(),
+        category: formData.category,
+        level: formData.level,
+        status: formData.status,
+        thumbnail: selectedImage,
+        professor_id: course.fields.professor_id || '',
+        paymentType: formData.paymentType,
+        ...(formData.paymentType === 'recurring' ? { 
+          recurrenceInterval: formData.recurrenceInterval 
+        } : {}),
+        ...(formData.paymentType === 'one_time' ? {
+          installments: formData.installments,
+          installmentCount: formData.installments ? formData.installmentCount : undefined
+        } : {})
+      };
+
+      console.log('EditCourseModal - handleSubmit - Dados do curso a serem enviados:', courseData);
+
+      // Primeiro, atualizar o curso
+      await onSave(courseData);
+      console.log('EditCourseModal - handleSubmit - Curso atualizado com sucesso');
+      
+      // Depois, atualizar os conteúdos do curso
+      console.log('EditCourseModal - handleSubmit - Atualizando conteúdos do curso:', contents);
+      try {
+        await updateCourseContents(course.id, contents);
+        console.log('EditCourseModal - handleSubmit - Conteúdos atualizados com sucesso');
+      } catch (contentError) {
+        console.error('EditCourseModal - handleSubmit - Erro ao atualizar conteúdos:', contentError);
+        setError('Curso atualizado, mas houve um erro ao salvar os conteúdos.');
+        // Não fechar o modal em caso de erro nos conteúdos
+        setLoading(false);
+        return;
+      }
+      
       onClose();
     } catch (error) {
-      console.error('Erro ao salvar curso:', error);
+      console.error('Erro ao atualizar curso:', error);
       setError(error instanceof Error ? error.message : 'Erro ao atualizar curso');
     } finally {
       setLoading(false);
@@ -136,16 +206,31 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
     }
   };
 
+  const handleSaveContents = async (newContents: VideoContent[]): Promise<void> => {
+    console.log('EditCourseModal - handleSaveContents chamado com:', JSON.stringify(newContents, null, 2));
+    console.log('ID do curso:', course.id);
+    try {
+      await updateCourseContents(course.id, newContents);
+      console.log('EditCourseModal - Conteúdos salvos com sucesso');
+      
+      // Recarregar os conteúdos para garantir que o estado esteja atualizado
+      await loadCourseContents();
+    } catch (error) {
+      console.error('EditCourseModal - Erro ao salvar conteúdos:', error);
+      throw error;
+    }
+  };
+
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       
       <div className="fixed inset-0 flex items-center justify-center overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <Dialog.Panel className="w-full max-w-[1200px] bg-white rounded-lg shadow-xl">
+          <Dialog.Panel className="w-full max-w-[1200px] bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             {/* Header */}
-            <div className="border-b px-6 py-4">
-              <Dialog.Title className="text-xl font-semibold text-gray-900">
+            <div className="border-b dark:border-gray-700 px-6 py-4">
+              <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Editar Curso
               </Dialog.Title>
             </div>
@@ -156,7 +241,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
               <div className="flex-1 min-w-[400px] p-6 overflow-y-auto">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+                    <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg">
                       {error}
                     </div>
                   )}
@@ -170,7 +255,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
                   />
 
                   <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                       Descrição
                     </label>
                     <textarea
@@ -178,21 +263,104 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
                       value={formData.description}
                       onChange={handleChange}
                       rows={4}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       required
                     />
                   </div>
 
-                  <Input
-                    label="Preço"
-                    name="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={handleChange}
-                    required
-                  />
+                  {/* Preço e Opções de Pagamento */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-1">
+                        <Input
+                          label="Preço"
+                          name="price"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.price}
+                          onChange={handleChange}
+                          required
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                          Tipo de Pagamento
+                        </label>
+                        <select
+                          name="paymentType"
+                          value={formData.paymentType}
+                          onChange={handleChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          required
+                        >
+                          <option value="one_time">Pagamento Único</option>
+                          <option value="recurring">Pagamento Recorrente</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Opções condicionais baseadas no tipo de pagamento */}
+                    {formData.paymentType === 'recurring' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                          Intervalo de Recorrência
+                        </label>
+                        <select
+                          name="recurrenceInterval"
+                          value={formData.recurrenceInterval || ''}
+                          onChange={handleChange}
+                          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          required
+                        >
+                          <option value="">Selecione um intervalo</option>
+                          <option value="monthly">Mensal</option>
+                          <option value="quarterly">Trimestral</option>
+                          <option value="biannual">Semestral</option>
+                          <option value="annual">Anual</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {formData.paymentType === 'one_time' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="installments"
+                            name="installments"
+                            checked={formData.installments}
+                            onChange={handleChange}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor="installments" className="ml-2 block text-sm text-gray-700 dark:text-gray-200">
+                            Permitir parcelamento
+                          </label>
+                        </div>
+
+                        {formData.installments && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                              Número de Parcelas
+                            </label>
+                            <select
+                              name="installmentCount"
+                              value={formData.installmentCount}
+                              onChange={handleChange}
+                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              required
+                            >
+                              {Array.from({ length: 17 }, (_, i) => i + 2).map(num => (
+                                <option key={num} value={num}>{num}x</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <Input
                     label="Categoria"
@@ -204,7 +372,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
 
                   {/* Status do Curso */}
                   <div className="space-y-4">
-                    <label className="block text-lg font-medium text-gray-900">
+                    <label className="block text-lg font-medium text-gray-900 dark:text-gray-100">
                       Status do Curso
                     </label>
                     <div className="grid grid-cols-3 gap-3">
@@ -220,8 +388,8 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
                             onClick={() => setFormData(prev => ({ ...prev, status }))}
                             className={`p-4 rounded-lg border ${
                               formData.status === status 
-                                ? `${info.borderColor} ${info.bgColor} ring-2 ring-blue-500`
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? `${info.borderColor} ${info.bgColor} dark:bg-opacity-10 ring-2 ring-blue-500`
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                             } text-left transition-all`}
                           >
                             <div className="flex items-center gap-3">
@@ -230,7 +398,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
                                 {info.text}
                               </span>
                             </div>
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                               {info.description}
                             </p>
                           </button>
@@ -240,7 +408,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                       Thumbnail
                     </label>
                     <ImageUpload
@@ -253,7 +421,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
               </div>
 
               {/* Lista de Vídeos */}
-              <div className="w-[450px] border-l overflow-y-auto">
+              <div className="w-[450px] border-l dark:border-gray-700 overflow-y-auto">
                 <div className="p-6">
                   <CourseContentManager
                     courseId={course.id}
@@ -265,7 +433,7 @@ export function EditCourseModal({ isOpen, onClose, onSave, course }: EditCourseM
             </div>
 
             {/* Footer */}
-            <div className="border-t px-6 py-4 bg-gray-50">
+            <div className="border-t dark:border-gray-700 px-6 py-4 bg-gray-50 dark:bg-gray-800">
               <div className="flex justify-end space-x-3">
                 <Button
                   type="button"

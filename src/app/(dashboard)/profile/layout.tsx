@@ -23,6 +23,16 @@ export default function ProfileLayout({
       href: '/profile/courses',
       label: 'Meus Cursos',
       show: isTeacher
+    },
+    {
+      href: '/profile/students',
+      label: 'Meus Alunos',
+      show: isTeacher
+    },
+    {
+      href: '/profile/payments',
+      label: 'Meus Recebimentos',
+      show: isTeacher
     }
   ];
 
