@@ -41,6 +41,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'via.placeholder.com', // Para imagens de placeholder
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com', // Para imagens do Unsplash
+      },
+      {
+        protocol: 'https',
+        hostname: 'randomuser.me', // Para avatares de demonstração
+      },
     ],
   },
 }

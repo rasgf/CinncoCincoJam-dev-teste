@@ -1,0 +1,64 @@
+{
+  "courses": [
+    {
+      "id": "course1",
+      "fields": {
+        "title": "Violão para Iniciantes",
+        "description": "Aprenda os fundamentos do violão, desde a afinação até os primeiros acordes.",
+        "price": 99,
+        "level": "beginner",
+        "status": "published",
+        "category": "Instrumentos de corda",
+        "thumbnail": "https://example.com/images/violao.jpg",
+        "what_will_learn": ["Afinação do violão", "Acordes básicos"],
+        "requirements": ["Ter um violão disponível"],
+        "professor_id": "prof1",
+        "contents": [
+          {"id": "vid1", "title": "Como Afinar o Violão", "youtubeUrl": "https://www.youtube.com/watch?v=5TqzeQJZQxQ", "releaseDate": "2024-03-01", "releaseTime": "10:00", "order": 1},
+          {"id": "vid2", "title": "Primeiros Acordes Básicos", "youtubeUrl": "https://www.youtube.com/watch?v=Jg-BRpn38L8", "releaseDate": "2024-03-02", "releaseTime": "10:00", "order": 2}
+        ],
+        "paymentType": "one_time"
+      }
+    },
+    {
+      "id": "course2",
+      "fields": {
+        "title": "Teoria Musical Essencial",
+        "description": "Entenda os conceitos básicos da teoria musical para melhorar sua prática musical.",
+        "price": 149,
+        "level": "intermediate",
+        "status": "published",
+        "category": "Teoria Musical",
+        "thumbnail": "https://example.com/images/teoria.jpg",
+        "what_will_learn": ["Introdução à teoria musical", "Escalas e modos"],
+        "requirements": ["Conhecimento básico de música"],
+        "professor_id": "prof2",
+        "contents": [
+          {"id": "vid3", "title": "Introdução à Teoria Musical", "youtubeUrl": "https://www.youtube.com/watch?v=6gHEIF0rT2w", "releaseDate": "2024-03-03", "releaseTime": "10:00", "order": 1},
+          {"id": "vid4", "title": "Escalas e Modos", "youtubeUrl": "https://www.youtube.com/watch?v=ZQ3b4Q7Q5x4", "releaseDate": "2024-03-04", "releaseTime": "10:00", "order": 2}
+        ],
+        "paymentType": "one_time"
+      }
+    },
+    {
+      "id": "course3",
+      "fields": {
+        "title": "Técnicas Avançadas de Piano",
+        "description": "Domine técnicas avançadas para piano e eleve sua performance musical.",
+        "price": 199,
+        "level": "advanced",
+        "status": "published",
+        "category": "Instrumentos de teclas",
+        "thumbnail": "https://example.com/images/piano.jpg",
+        "what_will_learn": ["Arpejos avançados", "Improvisação no piano"],
+        "requirements": ["Piano ou teclado disponível", "Conhecimento intermediário de piano"],
+        "professor_id": "prof3",
+        "contents": [
+          {"id": "vid5", "title": "Arpejos Avançados", "youtubeUrl": "https://www.youtube.com/watch?v=2X7eQe7Q5x4", "releaseDate": "2024-03-05", "releaseTime": "10:00", "order": 1},
+          {"id": "vid6", "title": "Improvisação no Piano", "youtubeUrl": "https://www.youtube.com/watch?v=3X7eQe7Q5x4", "releaseDate": "2024-03-06", "releaseTime": "10:00", "order": 2}
+        ],
+        "paymentType": "one_time"
+      }
+    }
+  ]
+} 
