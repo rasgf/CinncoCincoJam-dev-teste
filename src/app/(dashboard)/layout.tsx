@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { SunIcon, MoonIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { FullScreenLoading } from '@/components/common/Loading';
+import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
+import { PasswordModal } from '@/components/admin/PasswordModal';
+import { ConfigModal } from '@/components/admin/ConfigModal';
 
 export default function DashboardLayout({
   children,
@@ -17,6 +20,8 @@ export default function DashboardLayout({
   const isTeacher = firebaseUser?.fields.role === 'professor';
   const isAdmin = firebaseUser?.fields.role === 'admin';
   const [darkMode, setDarkMode] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -109,6 +114,15 @@ export default function DashboardLayout({
                 )}
               </button>
 
+              {/* Botão de Informação */}
+              <button
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                title="Informações"
+              >
+                <InformationCircleIcon className="h-5 w-5" />
+              </button>
+
               <button
                 onClick={handleLogout}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -161,6 +175,15 @@ export default function DashboardLayout({
                   )}
                 </button>
 
+                {/* Botão de Informação Mobile */}
+                <button
+                  onClick={() => setIsPasswordModalOpen(true)}
+                  className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <InformationCircleIcon className="h-5 w-5 mr-2" />
+                  Informações
+                </button>
+
                 <button
                   onClick={handleLogout}
                   className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
@@ -176,6 +199,25 @@ export default function DashboardLayout({
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 mt-16 dark:text-gray-200">
         {children}
       </main>
+      
+      {/* Chatbot Widget */}
+      <ChatbotWidget />
+
+      {/* Modal de Senha */}
+      <PasswordModal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={() => {
+          setIsPasswordModalOpen(false);
+          setIsConfigModalOpen(true);
+        }}
+      />
+
+      {/* Modal de Configuração */}
+      <ConfigModal 
+        isOpen={isConfigModalOpen} 
+        onClose={() => setIsConfigModalOpen(false)}
+      />
     </div>
   );
 } 

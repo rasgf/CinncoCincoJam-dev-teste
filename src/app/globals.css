@@ -13,3 +13,65 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Estilos para o markdown no chatbot */
+.prose pre {
+  @apply bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto text-xs my-2;
+}
+
+.prose code {
+  @apply bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs;
+}
+
+.prose table {
+  @apply min-w-full text-xs border-collapse my-2;
+}
+
+.prose th {
+  @apply border border-gray-300 dark:border-gray-700 px-2 py-1 bg-gray-100 dark:bg-gray-800;
+}
+
+.prose td {
+  @apply border border-gray-300 dark:border-gray-700 px-2 py-1;
+}
+
+.prose p {
+  @apply my-1;
+}
+
+.prose ul, .prose ol {
+  @apply pl-5 my-1;
+}
+
+.prose li {
+  @apply my-0.5;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  @apply font-bold my-2;
+}
+
+.prose h1 {
+  @apply text-xl;
+}
+
+.prose h2 {
+  @apply text-lg;
+}
+
+.prose h3 {
+  @apply text-base;
+}
+
+.prose h4, .prose h5, .prose h6 {
+  @apply text-sm;
+}
+
+.dark .prose {
+  @apply text-gray-200;
+}
+
+/* Estilos para o chatbot expandido */
+.fixed.inset-0.m-auto {
+  @apply max-w-4xl mx-auto my-auto;
+}
