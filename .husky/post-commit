@@ -2,4 +2,9 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 # Atualiza o arquivo de diretrizes se houver novos commits relevantes
-npm run update-guidelines 
+if npm run update-guidelines 2>/dev/null; then
+  echo "✅ Diretrizes atualizadas com sucesso"
+else
+  echo "⚠️ Não foi possível atualizar as diretrizes, mas o commit foi concluído"
+  exit 0  # Não falha o commit se o script falhar
+fi 
