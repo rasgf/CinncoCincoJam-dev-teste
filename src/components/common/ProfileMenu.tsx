@@ -15,7 +15,7 @@ export function ProfileMenu() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.push('/auth/login');
+      router.push('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
