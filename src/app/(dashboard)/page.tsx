@@ -2,159 +2,45 @@
 
 import { useEffect, useState } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { CourseCard } from '@/components/courses/CourseCard';
-import { StatsCard } from '@/components/dashboard/StatsCard';
-import { getUserCourses } from '@/services/firebase-courses';
-import { getProfessorStats } from '@/services/firebase-courses';
-import { getAdminStats } from '@/services/firebase-admin';
-import { Course } from '@/types/course';
-
-interface Stats {
-  totalStudents: number;
-  activeCourses: number;
-  monthlyRevenue: number;
-  studentsTrend: {
-    value: number;
-    isPositive: boolean;
-  };
-  revenueTrend: {
-    value: number;
-    isPositive: boolean;
-  };
-}
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user, airtableUser } = useAuthContext();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const isTeacher = airtableUser?.fields.role === 'professor';
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        if (isTeacher) {
-          const [coursesData, statsData] = await Promise.all([
-            getUserCourses(airtableUser.id),
-            getProfessorStats(airtableUser.id)
-          ]);
-          setCourses(coursesData);
-          setStats(statsData);
-        } else {
-          const coursesData = await getUserCourses(airtableUser.id);
-          setCourses(coursesData);
-        }
-      } catch (err) {
-        setError('Erro ao carregar dados do dashboard');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (airtableUser) {
-      loadDashboardData();
-    }
-  }, [airtableUser, isTeacher]);
-
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setLoading(true);
-        if (airtableUser?.fields.role === 'admin') {
-          const data = await getAdminStats();
-          setStats(data);
-        } else if (airtableUser?.fields.role === 'professor') {
-          const data = await getProfessorStats(airtableUser.id);
-          setStats(data);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar estatísticas:', error);
-        setError('Alguns dados podem estar indisponíveis no momento');
-        // Definir valores padrão para as estatísticas
-        setStats({
-          totalUsers: 0,
-          totalCourses: 0,
-          totalRevenue: 0,
-          activeStudents: 0,
-          pendingProfessors: 0
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (airtableUser) {
-      loadStats();
-    }
-  }, [airtableUser]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          {error}
-        </div>
-      </div>
-    );
-  }
+    setLoading(false);
+  }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">
-        {isTeacher ? 'Dashboard do Professor' : 'Meus Cursos'}
-      </h1>
-
-      {isTeacher && stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <StatsCard
-            title="Total de Alunos"
-            value={stats.totalStudents}
-            trend={stats.studentsTrend}
-          />
-          <StatsCard
-            title="Cursos Ativos"
-            value={stats.activeCourses}
-          />
-          <StatsCard
-            title="Rendimentos (Mês)"
-            value={`R$ ${stats.monthlyRevenue.toFixed(2)}`}
-            trend={stats.revenueTrend}
-          />
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses.map((course) => (
-          <CourseCard
-            key={course.id}
-            title={course.fields.title}
-            description={course.fields.description}
-            thumbnail={course.fields.thumbnail?.[0]?.url}
-            progress={!isTeacher ? course.fields.progress : undefined}
-            professor={!isTeacher ? course.fields.professor_name : undefined}
-            price={isTeacher ? course.fields.price : undefined}
-          />
-        ))}
-      </div>
-
-      {courses.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            {isTeacher 
-              ? 'Você ainda não criou nenhum curso.' 
-              : 'Você ainda não está matriculado em nenhum curso.'}
-          </p>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      
+      {loading ? (
+        <p>Carregando...</p>
+      ) : (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">Bem-vindo, {airtableUser?.fields?.name || user?.email || 'Usuário'}</h2>
+            <p className="text-gray-600">Aqui está uma visão geral da sua conta.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link href="/dashboard/courses" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-bold mb-2">Cursos</h3>
+              <p className="text-gray-600">Ver todos os seus cursos</p>
+            </Link>
+            
+            <Link href="/dashboard/profile" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-bold mb-2">Perfil</h3>
+              <p className="text-gray-600">Editar suas informações</p>
+            </Link>
+            
+            <Link href="/dashboard/settings" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-bold mb-2">Configurações</h3>
+              <p className="text-gray-600">Ajustar preferências</p>
+            </Link>
+          </div>
         </div>
       )}
     </div>
