@@ -99,10 +99,24 @@ export const updateCourseContents = async (courseId: string, contents: VideoCont
       // Se for um ID temporário, criar um novo
       const id = content.id.startsWith('temp_') ? `video-${Date.now()}-${index}` : content.id;
       
+      // Garante que os campos releaseDate e releaseTime estejam definidos, mesmo que vazios
+      const releaseDate = content.releaseDate || '';
+      const releaseTime = content.releaseTime || '';
+      
+      console.log(`Processando vídeo ${content.title}:`, {
+        id,
+        releaseDate,
+        releaseTime,
+        hasReleaseDate: !!releaseDate,
+        hasReleaseTime: !!releaseTime
+      });
+      
       return {
         ...content,
         id,
-        order: content.order !== undefined ? content.order : index
+        order: content.order !== undefined ? content.order : index,
+        releaseDate,
+        releaseTime
       };
     });
     
@@ -112,6 +126,14 @@ export const updateCourseContents = async (courseId: string, contents: VideoCont
     const contentsObject: Record<string, any> = {};
     formattedContents.forEach(content => {
       const { id, ...contentData } = content;
+      
+      // Garante que todos os campos necessários estejam sempre incluídos
+      contentData.title = contentData.title || '';
+      contentData.youtubeUrl = contentData.youtubeUrl || '';
+      contentData.releaseDate = contentData.releaseDate || '';
+      contentData.releaseTime = contentData.releaseTime || '';
+      contentData.order = contentData.order || 0;
+      
       contentsObject[id] = contentData;
     });
     
@@ -120,6 +142,21 @@ export const updateCourseContents = async (courseId: string, contents: VideoCont
     // Atualizar tudo de uma vez
     await set(courseContentsRef, contentsObject);
     console.log('Conteúdos atualizados com sucesso para o curso:', courseId);
+    
+    // Verificar se os dados foram salvos corretamente
+    const snapshot = await get(courseContentsRef);
+    const savedData = snapshot.val();
+    console.log('Dados salvos no Firebase:', JSON.stringify(savedData, null, 2));
+    
+    // Verificar se os dados de release estão presentes nos dados salvos
+    Object.entries(savedData).forEach(([id, data]: [string, any]) => {
+      console.log(`Verificando vídeo ${data.title}:`, {
+        releaseDate: data.releaseDate,
+        releaseTime: data.releaseTime,
+        hasReleaseDate: !!data.releaseDate,
+        hasReleaseTime: !!data.releaseTime
+      });
+    });
     
     return true;
   } catch (error) {

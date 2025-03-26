@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { SunIcon, MoonIcon, InformationCircleIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { SunIcon, MoonIcon, InformationCircleIcon, UserCircleIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { FullScreenLoading } from '@/components/common/Loading';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { PasswordModal } from '@/components/admin/PasswordModal';
 import { ConfigModal } from '@/components/admin/ConfigModal';
 import { Toaster } from 'react-hot-toast';
+import { getUnreadMessageCount } from '@/services/firebase-messages';
 
 export default function DashboardLayout({
   children,
@@ -26,6 +27,7 @@ export default function DashboardLayout({
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [showCamarimMessage, setShowCamarimMessage] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,6 +84,27 @@ export default function DashboardLayout({
     }
   };
 
+  // Carregar contagem de mensagens não lidas
+  useEffect(() => {
+    if (user) {
+      const loadUnreadCount = async () => {
+        try {
+          const count = await getUnreadMessageCount(user.uid);
+          setUnreadMessages(count);
+        } catch (error) {
+          console.error('Erro ao carregar contagem de mensagens não lidas:', error);
+        }
+      };
+      
+      loadUnreadCount();
+      
+      // Atualizar contagem a cada minuto
+      const intervalId = setInterval(loadUnreadCount, 60000);
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [user]);
+
   if (loading) {
     return <FullScreenLoading />;
   }
@@ -94,6 +117,7 @@ export default function DashboardLayout({
       message: 'Você já está no seu perfil!',
     },
     { href: '/courses', label: 'Cursos' },
+    { href: '/messages', label: 'Mensagens', badge: unreadMessages > 0 ? unreadMessages : null },
     { href: '/apps-pro', label: 'Apps PRO' },
   ];
 
@@ -114,9 +138,14 @@ export default function DashboardLayout({
                     key={item.path || item.href}
                     href={item.path || item.href}
                     onClick={(e) => item.path === '/profile' && handleProfileClick(e, item.path)}
-                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-gray-100 border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-gray-100 border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 relative"
                   >
                     {item.label}
+                    {item.badge && (
+                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>

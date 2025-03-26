@@ -13,6 +13,7 @@ import { PaymentModal } from '@/components/payments/PaymentModal';
 import { getCourseAverageRating } from '@/services/firebase-ratings';
 import { StarRating } from '@/components/common/StarRating';
 import { RatingComments } from '@/components/courses/RatingComments';
+import { NewConversationButton } from '@/components/messages/NewConversationButton';
 
 interface CourseFields {
   title: string;
@@ -28,6 +29,12 @@ interface CourseFields {
   recurrenceInterval?: 'monthly' | 'quarterly' | 'biannual' | 'annual';
   installments?: boolean;
   installmentCount?: number;
+  releaseDate?: string;
+  releaseTime?: string;
+  professor_name?: string;
+  main_category?: string;
+  sub_category?: string;
+  specific_category?: string;
 }
 
 interface CourseData {
@@ -106,7 +113,14 @@ export default function CoursePage() {
           paymentType: data.fields.paymentType,
           recurrenceInterval: data.fields.recurrenceInterval,
           installments: data.fields.installments,
-          installmentCount: data.fields.installmentCount
+          installmentCount: data.fields.installmentCount,
+          releaseDate: data.fields.releaseDate,
+          releaseTime: data.fields.releaseTime,
+          professor_id: data.fields.professor_id,
+          professor_name: data.fields.professor_name,
+          main_category: data.fields.main_category,
+          sub_category: data.fields.sub_category,
+          specific_category: data.fields.specific_category
         }
       });
       
@@ -177,6 +191,14 @@ export default function CoursePage() {
     return price;
   };
 
+  // Formatar nome de categoria
+  const formatCategoryName = (name?: string) => {
+    if (!name) return '';
+    return name.replace(/_/g, ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -194,9 +216,68 @@ export default function CoursePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              {course.fields.title}
-            </h1>
+            <div>
+              {/* Categorias */}
+              {course.fields.main_category && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
+                    {formatCategoryName(course.fields.main_category)}
+                  </span>
+                  {course.fields.sub_category && (
+                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-full text-sm">
+                      {formatCategoryName(course.fields.sub_category)}
+                    </span>
+                  )}
+                  {course.fields.specific_category && (
+                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm">
+                      {formatCategoryName(course.fields.specific_category)}
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                {course.fields.title}
+              </h1>
+              
+              {/* Professor */}
+              {course.fields.professor_name && (
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                    <span>Professor: {course.fields.professor_name}</span>
+                  </div>
+                  
+                  {/* Botão de enviar mensagem para o professor */}
+                  {user && course.fields.professor_id && user.uid !== course.fields.professor_id && (
+                    <NewConversationButton
+                      userId={user.uid}
+                      userName={airtableUser?.fields.name || user.email || 'Aluno'}
+                      recipientId={course.fields.professor_id}
+                      recipientName={course.fields.professor_name || 'Professor'}
+                      courseId={course.id}
+                      courseTitle={course.fields.title}
+                      buttonText="Mensagem para o Professor"
+                      variant="outline"
+                      size="sm"
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Avaliações */}
+              {courseRating.count > 0 && (
+                <div className="flex items-center gap-2 mb-4">
+                  <StarRating initialRating={courseRating.average} readOnly />
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {courseRating.average.toFixed(1)} ({courseRating.count} {courseRating.count === 1 ? 'avaliação' : 'avaliações'})
+                  </span>
+                </div>
+              )}
+            </div>
+            
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
               {course.fields.description}
             </p>
@@ -291,12 +372,39 @@ export default function CoursePage() {
                     </Button>
                   )}
                   
-                  <Button
-                    onClick={handleStartCourse}
-                    className={`w-full ${!isEnrolled && course.fields.price > 0 ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'}`}
-                  >
-                    {isEnrolled ? 'Acessar Curso' : 'Começar Curso'}
-                  </Button>
+                  {course.fields.releaseDate && new Date() < new Date(`${course.fields.releaseDate}T${course.fields.releaseTime || '00:00'}`) ? (
+                    <>
+                      <Button
+                        disabled
+                        className="w-full bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                      >
+                        Curso Bloqueado
+                      </Button>
+                      <div className="col-span-2 mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                        <div className="flex items-center">
+                          <svg className="h-5 w-5 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-8.414l2.293-2.293a1 1 0 111.414 1.414L11.414 12l3.293 3.293a1 1 0 01-1.414 1.414L10 13.414l-3.293 3.293a1 1 0 01-1.414-1.414L8.586 12 5.293 8.707a1 1 0 011.414-1.414L10 10.586l2.293-2.293z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                            Este curso será liberado em {new Date(`${course.fields.releaseDate}T${course.fields.releaseTime || '00:00'}`).toLocaleDateString('pt-BR', { 
+                              day: '2-digit', 
+                              month: '2-digit', 
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit' 
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <Button
+                      onClick={handleStartCourse}
+                      className={`w-full ${!isEnrolled && course.fields.price > 0 ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'}`}
+                    >
+                      {isEnrolled ? 'Acessar Curso' : 'Começar Curso'}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -331,16 +439,6 @@ export default function CoursePage() {
             )}
           </div>
         </div>
-
-        {/* Rating */}
-        {courseRating.average > 0 && (
-          <div className="flex items-center justify-center mt-6">
-            <StarRating initialRating={courseRating.average} readOnly />
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-              {courseRating.average.toFixed(1)} ({courseRating.count} {courseRating.count === 1 ? 'avaliação' : 'avaliações'})
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Payment Modal */}

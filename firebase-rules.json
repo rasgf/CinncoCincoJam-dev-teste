@@ -7,6 +7,12 @@
     },
     "video_ratings": {
       ".indexOn": ["course_id", "video_id"]
+    },
+    "conversations": {
+      ".indexOn": ["participants"]
+    },
+    "messages": {
+      ".indexOn": ["conversation_id", "status"]
     }
   }
 } 

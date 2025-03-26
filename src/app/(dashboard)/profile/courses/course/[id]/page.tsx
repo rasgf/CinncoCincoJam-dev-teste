@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { getCourseById } from '@/services/firebase-courses';
+import { getCourseById, updateCourse } from '@/services/firebase-courses';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { ProxyImage } from '@/components/common/ProxyImage';
@@ -12,7 +12,9 @@ import { getCourseAverageRating } from '@/services/firebase-ratings';
 import { StarRating } from '@/components/common/StarRating';
 import { Course } from '@/types/course';
 import Link from 'next/link';
-import { ChevronLeftIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { Input } from '@/components/common/Input';
+import { toast } from 'react-hot-toast';
 
 export default function CourseDetailsPage() {
   const { id } = useParams();
@@ -21,6 +23,10 @@ export default function CourseDetailsPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [courseRating, setCourseRating] = useState({ average: 0, count: 0 });
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [releaseDate, setReleaseDate] = useState("");
+  const [releaseTime, setReleaseTime] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!airtableUser) return;
@@ -56,6 +62,86 @@ export default function CourseDetailsPage() {
     if (!items) return [];
     if (typeof items === 'string') return items.split(',');
     return items;
+  };
+
+  const handleShowReleaseModal = () => {
+    if (course) {
+      setReleaseDate(course.fields.releaseDate || "");
+      setReleaseTime(course.fields.releaseTime || "");
+    }
+    setShowReleaseModal(true);
+  };
+
+  const handleSaveRelease = async () => {
+    if (!course) return;
+    
+    try {
+      setSaving(true);
+      
+      // Preparar os dados a serem atualizados
+      const updateData = {
+        releaseDate,
+        releaseTime
+      };
+      
+      // Atualizar o curso
+      await updateCourse(id as string, updateData);
+      
+      // Atualizar o curso local
+      setCourse({
+        ...course,
+        fields: {
+          ...course.fields,
+          releaseDate,
+          releaseTime
+        }
+      });
+      
+      setShowReleaseModal(false);
+      toast.success("Programação de lançamento salva com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar programação:", error);
+      toast.error("Erro ao salvar programação. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearRelease = async () => {
+    if (!course) return;
+    
+    try {
+      setSaving(true);
+      
+      // Preparar os dados a serem atualizados
+      const updateData = {
+        releaseDate: "",
+        releaseTime: ""
+      };
+      
+      // Atualizar o curso
+      await updateCourse(id as string, updateData);
+      
+      // Atualizar o curso local
+      setCourse({
+        ...course,
+        fields: {
+          ...course.fields,
+          releaseDate: "",
+          releaseTime: ""
+        }
+      });
+      
+      setReleaseDate("");
+      setReleaseTime("");
+      setShowReleaseModal(false);
+      toast.success("Programação de lançamento removida com sucesso!");
+    } catch (error) {
+      console.error("Erro ao remover programação:", error);
+      toast.error("Erro ao remover programação. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -171,9 +257,50 @@ export default function CourseDetailsPage() {
                 </div>
                 <Link href={`/profile/courses/content/${id}`}>
                   <Button size="sm">
-                    Gerenciar Conteúdo
+                    Editar Curso
                   </Button>
                 </Link>
+              </div>
+            </div>
+          </Card>
+          
+          <Card>
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                Programação de Lançamento
+              </h2>
+              <div className="space-y-4">
+                {course?.fields.releaseDate ? (
+                  <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <CalendarIcon className="h-5 w-5 text-blue-500 mr-2" />
+                      <span className="text-blue-700 dark:text-blue-300 font-medium">
+                        Lançamento programado para: {new Date(`${course.fields.releaseDate}T${course.fields.releaseTime || '00:00'}`).toLocaleDateString('pt-BR', { 
+                          day: '2-digit', 
+                          month: '2-digit', 
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      O curso só estará disponível para os alunos matriculados a partir desta data.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Seu curso está disponível imediatamente para alunos matriculados.
+                  </p>
+                )}
+                
+                <Button 
+                  onClick={handleShowReleaseModal}
+                  variant="outline"
+                  size="sm"
+                >
+                  {course?.fields.releaseDate ? "Alterar programação" : "Programar lançamento"}
+                </Button>
               </div>
             </div>
           </Card>
@@ -229,12 +356,6 @@ export default function CourseDetailsPage() {
               </div>
               
               <div className="mt-6 flex flex-col space-y-2">
-                <Link href={`/profile/courses/edit/${id}`}>
-                  <Button variant="outline" className="w-full">
-                    Editar Curso
-                  </Button>
-                </Link>
-                
                 <Link href={`/courses/${id}`} target="_blank">
                   <Button variant="outline" className="w-full">
                     Ver Página do Curso
@@ -245,6 +366,78 @@ export default function CourseDetailsPage() {
           </Card>
         </div>
       </div>
+      
+      {/* Modal de programação de lançamento */}
+      {showReleaseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Programar Lançamento
+              </h2>
+              <button 
+                onClick={() => setShowReleaseModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <p className="text-gray-600 dark:text-gray-400">
+                Defina quando seu curso estará disponível para os alunos matriculados. 
+                Até esta data, os alunos poderão ver a página do curso, mas não terão acesso ao conteúdo.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="date"
+                    label="Data de Lançamento"
+                    value={releaseDate}
+                    onChange={(e) => setReleaseDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]} // Data mínima é hoje
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="time"
+                    label="Horário"
+                    value={releaseTime}
+                    onChange={(e) => setReleaseTime(e.target.value)}
+                    disabled={!releaseDate}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3">
+              <Button
+                onClick={handleSaveRelease}
+                isLoading={saving}
+                disabled={saving || !releaseDate}
+                className="flex-1"
+              >
+                Salvar
+              </Button>
+              
+              {course?.fields.releaseDate && (
+                <Button
+                  onClick={handleClearRelease}
+                  isLoading={saving}
+                  disabled={saving}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Remover Programação
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

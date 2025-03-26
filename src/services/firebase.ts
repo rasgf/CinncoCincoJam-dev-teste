@@ -12,7 +12,9 @@ export const collections = {
   affiliates: 'affiliates',
   settings: 'settings',
   lesson_progress: 'lesson_progress',
-  course_contents: 'courseContents'
+  course_contents: 'courseContents',
+  conversations: 'conversations',
+  messages: 'messages'
 };
 
 // Criar um usuário no Firebase

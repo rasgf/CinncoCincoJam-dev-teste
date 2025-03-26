@@ -11,6 +11,7 @@ import { VideoPlayer } from '@/components/common/VideoPlayer';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/common/Button';
 import { VideoRatingCard } from '@/components/courses/VideoRatingCard';
+import { NewConversationButton } from '@/components/messages/NewConversationButton';
 
 export default function CoursePlayerPage() {
   const { id } = useParams();
@@ -30,6 +31,18 @@ export default function CoursePlayerPage() {
     }
   }, [id, airtableUser]);
 
+  const isValidDate = (dateString: string, timeString: string = '00:00'): boolean => {
+    if (!dateString) return false;
+    
+    try {
+      const date = new Date(`${dateString}T${timeString || '00:00'}`);
+      return !isNaN(date.getTime());
+    } catch (e) {
+      console.error('Erro ao validar data:', e);
+      return false;
+    }
+  };
+
   const loadCourseAndContents = async () => {
     try {
       setLoading(true);
@@ -37,6 +50,8 @@ export default function CoursePlayerPage() {
       // Carregar o curso primeiro
       const courseData = await getCourseById(id as string);
       setCourse(courseData);
+      
+      console.log('Dados do curso carregados:', courseData);
       
       // Verificar se o usuário tem acesso ao curso (é professor do curso ou está matriculado)
       const isTeacher = airtableUser?.fields.role === 'professor' && 
@@ -49,6 +64,39 @@ export default function CoursePlayerPage() {
       // Se não for professor do curso nem admin, verificar matrícula
       if (!isTeacher && !isAdmin) {
         enrollmentCheck = await checkEnrollment(airtableUser?.id || '', id as string);
+        console.log('Status da matrícula:', enrollmentCheck);
+        
+        // Verificar se o curso tem data de lançamento programada
+        if (enrollmentCheck && courseData.fields.releaseDate) {
+          // Validar o formato da data antes de criar o objeto Date
+          if (isValidDate(courseData.fields.releaseDate, courseData.fields.releaseTime)) {
+            const releaseDateTime = new Date(`${courseData.fields.releaseDate}T${courseData.fields.releaseTime || '00:00'}`);
+            const now = new Date();
+            
+            console.log('Data de lançamento do curso:', releaseDateTime);
+            console.log('Data atual:', now);
+            
+            // Se a data atual for anterior à data de lançamento, não permitir acesso
+            if (now < releaseDateTime) {
+              setHasAccess(false);
+              setVideoError({
+                message: `Este curso será liberado em ${releaseDateTime.toLocaleDateString('pt-BR', { 
+                  day: '2-digit', 
+                  month: '2-digit', 
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit' 
+                })}`
+              });
+              setAccessChecking(false);
+              setLoading(false);
+              return;
+            }
+          } else {
+            console.warn('Data de lançamento do curso inválida:', courseData.fields.releaseDate, courseData.fields.releaseTime);
+          }
+        }
+        
         setHasAccess(enrollmentCheck);
       } else {
         // Professores do curso e admins têm acesso automático
@@ -60,11 +108,73 @@ export default function CoursePlayerPage() {
       // Se tem acesso, carrega o conteúdo do curso
       if (isTeacher || isAdmin || enrollmentCheck) {
         const contentsData = await getCourseContents(id as string);
-        setContents(contentsData);
+        console.log('Conteúdos do curso carregados:', contentsData);
         
-        // Selecionar o primeiro vídeo disponível
+        // Para alunos comuns, filtrar vídeos baseado nas datas de lançamento individuais
+        if (!isTeacher && !isAdmin) {
+          const now = new Date();
+          const filteredContents = contentsData.map(video => {
+            // Verifica se o vídeo tem data de lançamento definida
+            const hasReleaseDate = video.releaseDate && video.releaseTime && 
+                                  isValidDate(video.releaseDate, video.releaseTime);
+            
+            // Adicionar propriedade para indicar se está disponível
+            let isLocked = false;
+            let releaseDate = null;
+            
+            if (hasReleaseDate) {
+              releaseDate = new Date(`${video.releaseDate}T${video.releaseTime || '00:00'}`);
+              isLocked = now < releaseDate;
+              
+              console.log(`Vídeo ${video.title}:`, {
+                releaseDate: video.releaseDate,
+                releaseTime: video.releaseTime,
+                releaseDateTime: releaseDate,
+                isLocked
+              });
+            }
+            
+            return {
+              ...video,
+              isLocked,
+              lockedMessage: isLocked ? 
+                `Disponível em ${releaseDate?.toLocaleDateString('pt-BR', { 
+                  day: '2-digit', 
+                  month: '2-digit', 
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit' 
+                })}` : ''
+            };
+          });
+          
+          setContents(filteredContents);
+        } else {
+          // Professores e admins veem todos os vídeos
+          setContents(contentsData);
+        }
+        
+        // Selecionar o primeiro vídeo disponível para alunos comuns
         if (contentsData.length > 0) {
-          setSelectedVideo(contentsData[0]);
+          if (!isTeacher && !isAdmin) {
+            const now = new Date();
+            const firstAvailableVideo = contentsData.find(video => {
+              // Se não tem data de lançamento, está disponível
+              if (!video.releaseDate || !video.releaseTime) return true;
+              
+              // Validar o formato da data
+              if (!isValidDate(video.releaseDate, video.releaseTime)) return true;
+              
+              // Se tem data, verificar se está disponível
+              const releaseDateTime = new Date(`${video.releaseDate}T${video.releaseTime || '00:00'}`);
+              return now >= releaseDateTime;
+            }) || null;
+            
+            setSelectedVideo(firstAvailableVideo);
+          } else {
+            // Professores e admins veem o primeiro vídeo
+            setSelectedVideo(contentsData[0]);
+          }
         }
       }
     } catch (error) {
@@ -78,6 +188,47 @@ export default function CoursePlayerPage() {
   const handleVideoError = (error: any) => {
     console.error('Erro no player de vídeo:', error);
     setVideoError(error);
+  };
+
+  const handleVideoSelection = (video: any) => {
+    // Para professores e admins, permitir qualquer vídeo
+    const isTeacher = airtableUser?.fields.role === 'professor' && 
+                      course?.fields.professor_id === airtableUser.id;
+    const isAdmin = airtableUser?.fields.role === 'admin';
+    
+    if (isTeacher || isAdmin) {
+      setSelectedVideo(video);
+      setVideoError(null);
+      return;
+    }
+    
+    // Verificar novamente a disponibilidade do vídeo
+    const now = new Date();
+    
+    // Verificar se o vídeo tem data de lançamento válida
+    if (video.releaseDate && video.releaseTime && isValidDate(video.releaseDate, video.releaseTime)) {
+      const releaseDateTime = new Date(`${video.releaseDate}T${video.releaseTime || '00:00'}`);
+      
+      // Verificar se ainda está bloqueado
+      if (now < releaseDateTime) {
+        const formattedDate = releaseDateTime.toLocaleDateString('pt-BR', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit' 
+        });
+        
+        setVideoError({
+          message: `Este vídeo será liberado em ${formattedDate}`
+        });
+        return;
+      }
+    }
+    
+    // Se o vídeo estiver disponível, exibi-lo
+    setSelectedVideo(video);
+    setVideoError(null);
   };
 
   if (loading || accessChecking) {
@@ -134,24 +285,52 @@ export default function CoursePlayerPage() {
           {/* Sidebar com lista de aulas */}
           <div className="w-full md:w-80 flex-shrink-0">
             <Card>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                {course.fields.title}
-              </h2>
-              <div className="space-y-2">
+              <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {course.fields.title}
+                </h2>
+                
+                {/* Botão de mensagem para o professor */}
+                {course.fields.professor_id && user && user.uid !== course.fields.professor_id && (
+                  <NewConversationButton
+                    userId={user.uid}
+                    userName={airtableUser?.fields.name || user.email || 'Aluno'}
+                    recipientId={course.fields.professor_id}
+                    recipientName={course.fields.professor_name || 'Professor'}
+                    courseId={id as string}
+                    courseTitle={course.fields.title}
+                    buttonText=""
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                    variant="ghost"
+                    size="sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
+                    </svg>
+                  </NewConversationButton>
+                )}
+              </div>
+              <div className="space-y-2 p-2">
                 {contents.map((video) => (
                   <button
                     key={video.id}
-                    onClick={() => {
-                      setSelectedVideo(video);
-                      setVideoError(null);
-                    }}
+                    onClick={() => handleVideoSelection(video)}
                     className={`w-full text-left p-3 rounded-lg transition-colors ${
                       selectedVideo?.id === video.id
                         ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                        : video.isLocked
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    <h3 className="font-medium">{video.title}</h3>
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-medium">{video.title}</h3>
+                      {video.isLocked && (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -179,6 +358,20 @@ export default function CoursePlayerPage() {
                         {course.fields.description}
                       </p>
                     </div>
+                  </div>
+                ) : videoError ? (
+                  <div className="text-center py-12">
+                    <div className="mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-yellow-500 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                      Conteúdo bloqueado
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400 mt-2">
+                      {videoError.message}
+                    </p>
                   </div>
                 ) : (
                   <div className="text-center py-12">

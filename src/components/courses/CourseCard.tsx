@@ -24,6 +24,8 @@ export interface CourseCardProps {
   recurrenceInterval?: RecurrenceInterval;
   installments?: boolean;
   installmentCount?: number;
+  mainCategory?: string;
+  subCategory?: string;
   onClick?: () => void;
 }
 
@@ -45,6 +47,8 @@ export default function CourseCard({
   recurrenceInterval,
   installments,
   installmentCount,
+  mainCategory,
+  subCategory,
   onClick
 }: CourseCardProps) {
   
@@ -111,12 +115,30 @@ export default function CourseCard({
             />
           </div>
         )}
+        
+        {mainCategory && (
+          <div className="absolute top-2 right-2">
+            <span className="px-2 py-1 bg-blue-600/80 text-white text-xs font-medium rounded">
+              {mainCategory.replace('_', ' ')}
+              {subCategory && ` - ${subCategory.replace('_', ' ')}`}
+            </span>
+          </div>
+        )}
       </div>
       
       <div className="p-5">
         <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">
           {title}
         </h3>
+        
+        {professor && (
+          <div className="flex items-center mb-2 text-gray-600 dark:text-gray-400 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
+            <span>Prof. {professor}</span>
+          </div>
+        )}
         
         {rating > 0 && (
           <div className="flex items-center mb-2">

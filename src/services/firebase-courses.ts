@@ -3,6 +3,7 @@ import { storage } from '@/config/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Course, CreateCourseData, ProfessorStats, VideoContent, PaymentType, RecurrenceInterval } from '@/types/course';
 import { collections } from './firebase';
+import { getProfessorById } from './firebase-professors';
 
 const db = getDatabase();
 
@@ -308,26 +309,56 @@ export const getAllPublishedCourses = async (): Promise<Course[]> => {
     
     const courses: Course[] = [];
     if (snapshot.exists()) {
+      const coursesPromises = [];
+      
       snapshot.forEach((childSnapshot) => {
         const courseData = childSnapshot.val();
         
         // Adicionar apenas cursos publicados
         if (courseData.status === 'published') {
-          courses.push({
-            id: childSnapshot.key as string,
-            fields: {
-              ...courseData,
-              // Garantir que todos os campos estejam presentes
-              category: courseData.category || '',
-              // Incluir campos de pagamento
-              paymentType: courseData.paymentType,
-              recurrenceInterval: courseData.recurrenceInterval,
-              installments: courseData.installments,
-              installmentCount: courseData.installmentCount
+          // Criar uma promise para cada curso que inclui a busca do professor
+          const coursePromise = (async () => {
+            let professorName = '';
+            
+            // Buscar informações do professor se houver um professor_id
+            if (courseData.professor_id) {
+              try {
+                const professor = await getProfessorById(courseData.professor_id);
+                if (professor) {
+                  professorName = professor.fields.name || '';
+                }
+              } catch (error) {
+                console.error(`Erro ao buscar professor para o curso ${childSnapshot.key}:`, error);
+              }
             }
-          });
+            
+            return {
+              id: childSnapshot.key as string,
+              fields: {
+                ...courseData,
+                // Garantir que todos os campos estejam presentes
+                category: courseData.category || '',
+                professor_name: professorName,
+                // Incluir campos de pagamento
+                paymentType: courseData.paymentType,
+                recurrenceInterval: courseData.recurrenceInterval,
+                installments: courseData.installments,
+                installmentCount: courseData.installmentCount,
+                // Campos de categoria
+                main_category: courseData.main_category as CourseMainCategory,
+                sub_category: courseData.sub_category || '',
+                specific_category: courseData.specific_category || ''
+              }
+            };
+          })();
+          
+          coursesPromises.push(coursePromise);
         }
       });
+      
+      // Aguardar todas as promises serem resolvidas
+      const resolvedCourses = await Promise.all(coursesPromises);
+      courses.push(...resolvedCourses);
     }
     
     // Ordenar por data de criação (mais recente primeiro)
@@ -346,18 +377,20 @@ export const getAllPublishedCourses = async (): Promise<Course[]> => {
 };
 
 export const updateCourse = async (courseId: string, courseData: {
-  title: string;
-  description: string;
-  price: string;
+  title?: string;
+  description?: string;
+  price?: string;
   category?: string;
-  level: string;
-  status: string;
-  thumbnail: File | null;
-  professor_id: string;
-  paymentType: PaymentType;
+  level?: string;
+  status?: string;
+  thumbnail?: File | null;
+  professor_id?: string;
+  paymentType?: PaymentType;
   recurrenceInterval?: RecurrenceInterval;
   installments?: boolean;
   installmentCount?: number;
+  releaseDate?: string;
+  releaseTime?: string;
 }) => {
   try {
     console.log('updateCourse - Iniciando atualização do curso:', courseId);
@@ -391,53 +424,40 @@ export const updateCourse = async (courseId: string, courseData: {
     const currentCourseData = snapshot.val();
     console.log('updateCourse - Dados atuais do curso:', JSON.stringify(currentCourseData, null, 2));
 
-    // Primeiro, remover campos de pagamento existentes para evitar conflitos
-    const cleanedCurrentData = { ...currentCourseData };
-    ['paymentType', 'recurrenceInterval', 'installments', 'installmentCount'].forEach(field => {
-      if (field in cleanedCurrentData) {
-        delete cleanedCurrentData[field];
-      }
-    });
-
-    // Garantir que não haja valores undefined
-    const updatedFields = {
-      ...cleanedCurrentData,
-      title: courseData.title || '',
-      description: courseData.description || '',
-      price: parseFloat(courseData.price) || 0,
-      // Usar string vazia se category for undefined
-      category: courseData.category || '',
-      level: courseData.level || '',
-      status: courseData.status || 'draft',
-      professor_id: courseData.professor_id || currentCourseData.professor_id,
-      updated_at: formattedDate,
-      // Sempre incluir o tipo de pagamento
-      paymentType: courseData.paymentType || 'one_time',
+    // Preparar os campos a serem atualizados
+    const updatedFields: any = {
+      ...currentCourseData,
+      updated_at: formattedDate
     };
 
-    // Adicionar campos específicos com base no tipo de pagamento
-    if (courseData.paymentType === 'recurring') {
-      if (courseData.recurrenceInterval) {
-        updatedFields.recurrenceInterval = courseData.recurrenceInterval;
-      }
+    // Atualizar apenas os campos fornecidos
+    if (courseData.title !== undefined) updatedFields.title = courseData.title;
+    if (courseData.description !== undefined) updatedFields.description = courseData.description;
+    if (courseData.price !== undefined) updatedFields.price = parseFloat(courseData.price) || 0;
+    if (courseData.category !== undefined) updatedFields.category = courseData.category;
+    if (courseData.level !== undefined) updatedFields.level = courseData.level;
+    if (courseData.status !== undefined) updatedFields.status = courseData.status;
+    if (courseData.professor_id !== undefined) updatedFields.professor_id = courseData.professor_id;
+    if (courseData.paymentType !== undefined) updatedFields.paymentType = courseData.paymentType;
+    
+    // Campos de pagamento
+    if (courseData.paymentType === 'recurring' && courseData.recurrenceInterval) {
+      updatedFields.recurrenceInterval = courseData.recurrenceInterval;
     } else if (courseData.paymentType === 'one_time') {
-      updatedFields.installments = courseData.installments || false;
+      if (courseData.installments !== undefined) updatedFields.installments = courseData.installments;
       if (courseData.installments && courseData.installmentCount) {
         updatedFields.installmentCount = courseData.installmentCount;
       }
     }
 
+    // Campos de programação de lançamento
+    if (courseData.releaseDate !== undefined) updatedFields.releaseDate = courseData.releaseDate;
+    if (courseData.releaseTime !== undefined) updatedFields.releaseTime = courseData.releaseTime;
+    
     // Adicionar thumbnail apenas se houver uma nova
     if (thumbnailUrl) {
       updatedFields.thumbnail = thumbnailUrl;
     }
-
-    // Remover quaisquer campos undefined que possam ter sido adicionados
-    Object.keys(updatedFields).forEach(key => {
-      if (updatedFields[key] === undefined) {
-        delete updatedFields[key];
-      }
-    });
 
     console.log('updateCourse - Campos atualizados a serem enviados:', JSON.stringify(updatedFields, null, 2));
 
@@ -469,6 +489,19 @@ export const getCourseById = async (id: string): Promise<Course> => {
     const courseData = snapshot.val();
     console.log('getCourseById - Dados do curso encontrado:', JSON.stringify(courseData, null, 2));
     
+    // Buscar informações do professor
+    let professorName = '';
+    if (courseData.professor_id) {
+      try {
+        const professor = await getProfessorById(courseData.professor_id);
+        if (professor) {
+          professorName = professor.fields.name || '';
+        }
+      } catch (error) {
+        console.error(`Erro ao buscar professor para o curso ${id}:`, error);
+      }
+    }
+    
     return {
       id: id,
       fields: {
@@ -481,14 +514,21 @@ export const getCourseById = async (id: string): Promise<Course> => {
         level: courseData.level,
         status: courseData.status,
         professor_id: courseData.professor_id,
+        professor_name: professorName,
         category: courseData.category || '',
+        main_category: courseData.main_category as CourseMainCategory,
+        sub_category: courseData.sub_category || '',
+        specific_category: courseData.specific_category || '',
         created_at: courseData.created_at,
         updated_at: courseData.updated_at,
         // Incluir campos de pagamento
         paymentType: courseData.paymentType,
         recurrenceInterval: courseData.recurrenceInterval,
         installments: courseData.installments,
-        installmentCount: courseData.installmentCount
+        installmentCount: courseData.installmentCount,
+        // Incluir campos de lançamento
+        releaseDate: courseData.releaseDate,
+        releaseTime: courseData.releaseTime
       }
     };
   } catch (error) {

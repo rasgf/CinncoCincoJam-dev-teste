@@ -253,76 +253,102 @@ export function CourseContentManager({ courseId, contents, onSave }: CourseConte
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6 mb-6">
             {contentsState.map((content, index) => (
               <div 
-                key={content.id} 
-                className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600"
+                key={index}
+                className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 grid grid-cols-1 gap-4">
-                    <Input
-                      label="Título do Vídeo"
-                      value={content.title}
-                      onChange={(e) => updateContent(index, 'title', e.target.value)}
-                      required
-                    />
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center">
+                    <span className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-semibold mr-3">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1">
+                      <Input
+                        label="Título do Vídeo"
+                        value={content.title}
+                        onChange={(e) => updateContent(index, 'title', e.target.value)}
+                        className="mb-0"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeContent(index)}
+                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                    aria-label="Remover vídeo"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                  <div className="md:col-span-3">
                     <Input
                       label="URL do YouTube"
                       value={content.youtubeUrl}
                       onChange={(e) => updateContent(index, 'youtubeUrl', e.target.value)}
                       placeholder="https://youtube.com/watch?v=..."
-                      required
                     />
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                        Disponibilidade
-                      </label>
-                      <div className="flex items-center space-x-4">
-                        <Input
-                          type="date"
-                          label="Data de Liberação (opcional)"
-                          value={content.releaseDate}
-                          onChange={(e) => updateContent(index, 'releaseDate', e.target.value)}
-                          className="flex-1"
-                        />
-                        <Input
-                          type="time"
-                          label="Hora de Liberação (opcional)"
-                          value={content.releaseTime}
-                          onChange={(e) => updateContent(index, 'releaseTime', e.target.value)}
-                          className="flex-1"
-                          disabled={!content.releaseDate}
-                        />
-                      </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {!content.releaseDate 
-                          ? "Vídeo sempre disponível" 
-                          : !content.releaseTime 
-                            ? "Disponível a partir do início do dia"
-                            : "Disponível a partir do horário especificado"}
-                      </p>
+                  </div>
+                  
+                  <div>
+                    <Input
+                      type="date"
+                      label="Data de Liberação"
+                      value={content.releaseDate}
+                      onChange={(e) => updateContent(index, 'releaseDate', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]} // Data mínima é hoje
+                    />
+                  </div>
+                  
+                  <div>
+                    <Input
+                      type="time"
+                      label="Horário"
+                      value={content.releaseTime}
+                      onChange={(e) => updateContent(index, 'releaseTime', e.target.value)}
+                      disabled={!content.releaseDate}
+                    />
+                  </div>
+                </div>
+                
+                {content.releaseDate && content.releaseTime && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-md">
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm text-yellow-700 dark:text-yellow-400">
+                        Este vídeo será liberado para os alunos em {new Date(`${content.releaseDate}T${content.releaseTime}`).toLocaleDateString('pt-BR', { 
+                          day: '2-digit', 
+                          month: '2-digit', 
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit' 
+                        })}
+                      </span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => removeContent(index)}
-                    className="ml-4 p-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30"
-                    title="Remover vídeo"
-                  >
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
-                </div>
+                )}
 
-                {/* Preview do vídeo se URL for válida */}
                 {content.youtubeUrl && (
                   <div className="mt-4">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Preview:
+                    </div>
+                    <div className="aspect-video rounded overflow-hidden bg-black">
                       <VideoPlayer 
                         videoId={content.youtubeUrl}
-                        title={content.title || "Preview do vídeo"}
+                        title={content.title || `Vídeo ${index + 1}`}
                         onError={(error) => handleVideoError(content.id, error)}
                       />
                     </div>
+                    {videoErrors[content.id] && (
+                      <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded text-sm text-red-700 dark:text-red-300">
+                        Erro ao carregar vídeo: {videoErrors[content.id]?.message || 'URL inválida ou vídeo indisponível'}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -343,6 +369,24 @@ export function CourseContentManager({ courseId, contents, onSave }: CourseConte
           </Button>
         </div>
       )}
+
+      <div className="mb-4 p-6 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-start mb-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h4 className="text-blue-800 dark:text-blue-300 font-medium">Programação de Lançamento de Vídeos</h4>
+            <p className="text-blue-700 dark:text-blue-400 text-sm mt-1">
+              Você pode definir datas e horários específicos para a liberação de cada vídeo. 
+              Os alunos só poderão acessar um vídeo quando a data programada chegar.
+            </p>
+            <p className="text-blue-700 dark:text-blue-400 text-sm mt-2">
+              Deixe os campos de data e hora vazios para disponibilizar o vídeo imediatamente após a matrícula do aluno.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
