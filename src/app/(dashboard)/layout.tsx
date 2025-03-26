@@ -9,6 +9,7 @@ import { FullScreenLoading } from '@/components/common/Loading';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { PasswordModal } from '@/components/admin/PasswordModal';
 import { ConfigModal } from '@/components/admin/ConfigModal';
+import { Toaster } from 'react-hot-toast';
 
 export default function DashboardLayout({
   children,
@@ -290,6 +291,18 @@ export default function DashboardLayout({
       <ConfigModal 
         isOpen={isConfigModalOpen} 
         onClose={() => setIsConfigModalOpen(false)}
+      />
+      
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 5000,
+          style: {
+            background: darkMode ? '#374151' : '#fff',
+            color: darkMode ? '#fff' : '#374151',
+          },
+        }}
       />
     </div>
   );

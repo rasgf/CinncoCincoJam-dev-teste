@@ -164,4 +164,95 @@ export const getStudentStats = async (userId: string): Promise<StudentStats> => 
     console.error('Erro ao buscar estatísticas do aluno:', error);
     throw error;
   }
+};
+
+export interface EnrollmentWithDetails {
+  id: string;
+  fields: {
+    user_id: string;
+    course_id: string;
+    professor_id: string;
+    status: string;
+    created_at: string;
+    userName?: string;
+    userEmail?: string;
+    courseName?: string;
+    professorName?: string;
+  };
+}
+
+export const getAllEnrollments = async (): Promise<EnrollmentWithDetails[]> => {
+  try {
+    // Buscar todas as matrículas
+    const enrollmentsRef = ref(db, collections.enrollments);
+    const enrollmentsSnapshot = await get(enrollmentsRef);
+    
+    if (!enrollmentsSnapshot.exists()) {
+      return [];
+    }
+    
+    const enrollments: EnrollmentWithDetails[] = [];
+    const userIds = new Set();
+    const courseIds = new Set();
+    const professorIds = new Set();
+    
+    // Primeiro, coletamos todos os IDs únicos
+    enrollmentsSnapshot.forEach((childSnapshot) => {
+      const enrollmentData = childSnapshot.val();
+      userIds.add(enrollmentData.user_id);
+      courseIds.add(enrollmentData.course_id);
+      professorIds.add(enrollmentData.professor_id);
+      
+      enrollments.push({
+        id: childSnapshot.key as string,
+        fields: enrollmentData
+      });
+    });
+    
+    // Buscar dados de usuários, cursos e professores de uma vez
+    const [usersSnapshot, coursesSnapshot] = await Promise.all([
+      get(ref(db, collections.users)),
+      get(ref(db, collections.courses))
+    ]);
+    
+    const users = new Map();
+    const courses = new Map();
+    
+    if (usersSnapshot.exists()) {
+      usersSnapshot.forEach((child) => {
+        if (userIds.has(child.key) || professorIds.has(child.key)) {
+          users.set(child.key, child.val());
+        }
+      });
+    }
+    
+    if (coursesSnapshot.exists()) {
+      coursesSnapshot.forEach((child) => {
+        if (courseIds.has(child.key)) {
+          courses.set(child.key, child.val());
+        }
+      });
+    }
+    
+    // Enriquecer os dados de matrícula com informações adicionais
+    return enrollments.map(enrollment => {
+      const user = users.get(enrollment.fields.user_id);
+      const course = courses.get(enrollment.fields.course_id);
+      const professor = users.get(enrollment.fields.professor_id);
+      
+      return {
+        ...enrollment,
+        fields: {
+          ...enrollment.fields,
+          userName: user?.name || '',
+          userEmail: user?.email || '',
+          courseName: course?.title || '',
+          professorName: professor?.name || ''
+        }
+      };
+    });
+  } catch (error) {
+    console.error('Erro ao buscar matrículas:', error);
+    throw error;
+  }
 }; 
