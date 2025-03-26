@@ -10,6 +10,9 @@ import { Loading } from '@/components/common/Loading';
 import { Course } from '@/types/course';
 import { ProxyImage } from '@/components/common/ProxyImage';
 import { PaymentModal } from '@/components/payments/PaymentModal';
+import { getCourseAverageRating } from '@/services/firebase-ratings';
+import { StarRating } from '@/components/common/StarRating';
+import { RatingComments } from '@/components/courses/RatingComments';
 
 interface CourseFields {
   title: string;
@@ -35,13 +38,14 @@ interface CourseData {
 export default function CoursePage() {
   const { id } = useParams();
   const router = useRouter();
-  const { airtableUser } = useAuthContext();
+  const { user, airtableUser } = useAuthContext();
   const [course, setCourse] = useState<CourseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentChecking, setEnrollmentChecking] = useState(true);
+  const [courseRating, setCourseRating] = useState({ average: 0, count: 0 });
 
   // Função auxiliar para converter what_will_learn em array
   const getWhatWillLearn = (items?: string | string[]): string[] => {
@@ -105,6 +109,16 @@ export default function CoursePage() {
           installmentCount: data.fields.installmentCount
         }
       });
+      
+      // Verificar se o usuário está matriculado
+      if (user) {
+        await checkUserEnrollment();
+      }
+      
+      // Carregar média de avaliações
+      const ratingData = await getCourseAverageRating(id as string);
+      setCourseRating(ratingData);
+      
     } catch (error) {
       console.error('Erro ao carregar curso:', error);
     } finally {
@@ -176,7 +190,159 @@ export default function CoursePage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              {course.fields.title}
+            </h1>
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
+              {course.fields.description}
+            </p>
+            
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                  O que você vai aprender
+                </h2>
+                <ul className="space-y-2">
+                  {getWhatWillLearn(course.fields.what_will_learn).map((item, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <svg 
+                        className="w-5 h-5 text-green-500 dark:text-green-400 mt-1" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth="2" 
+                          d="M5 13l4 4L19 7" 
+                        />
+                      </svg>
+                      <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {course.fields.requirements && (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                    Pré-requisitos
+                  </h2>
+                  <ul className="space-y-2">
+                    {getWhatWillLearn(course.fields.requirements).map((item, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <svg 
+                          className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-1" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth="2" 
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                          />
+                        </svg>
+                        <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  {course.fields.price !== undefined && (
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Investimento</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {getPaymentInfo()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {isEnrolled && (
+                  <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
+                    <div className="flex items-center">
+                      <svg className="h-5 w-5 text-green-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        Você já está matriculado neste curso
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {!isEnrolled && course.fields.price > 0 && airtableUser?.fields.role !== 'admin' && (
+                    <Button
+                      onClick={handleBuyCourse}
+                      className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600"
+                    >
+                      Comprar Curso
+                    </Button>
+                  )}
+                  
+                  <Button
+                    onClick={handleStartCourse}
+                    className={`w-full ${!isEnrolled && course.fields.price > 0 ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'}`}
+                  >
+                    {isEnrolled ? 'Acessar Curso' : 'Começar Curso'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                O que os alunos estão dizendo
+              </h2>
+              <RatingComments courseId={id as string} />
+            </div>
+          </div>
+          
+          <div className="lg:col-span-1">
+            {course.fields.thumbnail ? (
+              <div className="relative aspect-video rounded-lg overflow-hidden shadow-lg">
+                <ProxyImage
+                  src={course.fields.thumbnail}
+                  alt={course.fields.title}
+                  width={800}
+                  height={450}
+                  className="w-full h-full object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-black/10 dark:bg-black/30" />
+              </div>
+            ) : (
+              <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                <span className="text-gray-400 dark:text-gray-500">
+                  Imagem não disponível
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Rating */}
+        {courseRating.average > 0 && (
+          <div className="flex items-center justify-center mt-6">
+            <StarRating initialRating={courseRating.average} readOnly />
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+              {courseRating.average.toFixed(1)} ({courseRating.count} {courseRating.count === 1 ? 'avaliação' : 'avaliações'})
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Payment Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -346,139 +512,6 @@ export default function CoursePage() {
           </div>
         </div>
       )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            {course.fields.title}
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
-            {course.fields.description}
-          </p>
-          
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                O que você vai aprender
-              </h2>
-              <ul className="space-y-2">
-                {getWhatWillLearn(course.fields.what_will_learn).map((item, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <svg 
-                      className="w-5 h-5 text-green-500 dark:text-green-400 mt-1" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth="2" 
-                        d="M5 13l4 4L19 7" 
-                      />
-                    </svg>
-                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {course.fields.requirements && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                  Pré-requisitos
-                </h2>
-                <ul className="space-y-2">
-                  {getWhatWillLearn(course.fields.requirements).map((item, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <svg 
-                        className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-1" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth="2" 
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-                        />
-                      </svg>
-                      <span className="text-gray-700 dark:text-gray-300">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                {course.fields.price !== undefined && (
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Investimento</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {getPaymentInfo()}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {isEnrolled && (
-                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
-                  <div className="flex items-center">
-                    <svg className="h-5 w-5 text-green-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                      Você já está matriculado neste curso
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {!isEnrolled && course.fields.price > 0 && airtableUser?.fields.role !== 'admin' && (
-                  <Button
-                    onClick={handleBuyCourse}
-                    className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600"
-                  >
-                    Comprar Curso
-                  </Button>
-                )}
-                
-                <Button
-                  onClick={handleStartCourse}
-                  className={`w-full ${!isEnrolled && course.fields.price > 0 ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'}`}
-                >
-                  {isEnrolled ? 'Acessar Curso' : 'Começar Curso'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          {course.fields.thumbnail ? (
-            <div className="relative aspect-video rounded-lg overflow-hidden shadow-lg">
-              <ProxyImage
-                src={course.fields.thumbnail}
-                alt={course.fields.title}
-                width={800}
-                height={450}
-                className="w-full h-full object-cover"
-                priority
-              />
-              <div className="absolute inset-0 bg-black/10 dark:bg-black/30" />
-            </div>
-          ) : (
-            <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-              <span className="text-gray-400 dark:text-gray-500">
-                Imagem não disponível
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 } 

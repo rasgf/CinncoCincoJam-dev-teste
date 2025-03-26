@@ -10,6 +10,7 @@ import { EditCourseModal } from '@/components/courses/EditCourseModal';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import type { CreateCourseData, PaymentType, RecurrenceInterval, Course } from '@/types/course';
+import { getCourseAverageRating } from '@/services/firebase-ratings';
 
 export default function ManageCoursesPage() {
   const { airtableUser } = useAuthContext();
@@ -21,6 +22,7 @@ export default function ManageCoursesPage() {
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
   const router = useRouter();
   const [error, setError] = useState('');
+  const [coursesWithRatings, setCoursesWithRatings] = useState<(Course & { rating?: number, ratingCount?: number })[]>([]);
 
   useEffect(() => {
     loadCourses();
@@ -32,7 +34,25 @@ export default function ManageCoursesPage() {
     try {
       setLoading(true);
       const data = await getUserCourses(airtableUser.id);
+      
+      // Buscar avaliações para cada curso
+      const coursesWithRatingPromises = data.map(async (course) => {
+        try {
+          const ratingData = await getCourseAverageRating(course.id);
+          return {
+            ...course,
+            rating: ratingData.average,
+            ratingCount: ratingData.count
+          };
+        } catch (error) {
+          console.error(`Erro ao carregar avaliações para o curso ${course.id}:`, error);
+          return course;
+        }
+      });
+      
+      const enrichedCourses = await Promise.all(coursesWithRatingPromises);
       setCourses(data);
+      setCoursesWithRatings(enrichedCourses);
     } catch (error) {
       console.error('Erro ao carregar cursos:', error);
     } finally {
@@ -83,8 +103,7 @@ export default function ManageCoursesPage() {
   };
 
   const handleCourseClick = (course: Course) => {
-    setSelectedCourse(course);
-    setIsEditModalOpen(true);
+    router.push(`/profile/courses/course/${course.id}`);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -149,7 +168,7 @@ export default function ManageCoursesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course) => (
+          {coursesWithRatings.map((course) => (
             <div 
               key={course.id} 
               className="relative group transform hover:scale-[1.02] transition-all duration-200"
@@ -160,10 +179,13 @@ export default function ManageCoursesPage() {
                 thumbnail={course.fields.thumbnail}
                 price={course.fields.price}
                 level={course.fields.level}
+                rating={course.rating}
+                ratingCount={course.ratingCount}
                 paymentType={course.fields.paymentType}
                 recurrenceInterval={course.fields.recurrenceInterval}
                 installments={course.fields.installments}
                 installmentCount={course.fields.installmentCount}
+                onClick={() => handleCourseClick(course)}
               />
 
               {/* Status Badge */}

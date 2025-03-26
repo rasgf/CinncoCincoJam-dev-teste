@@ -11,6 +11,7 @@ export default function ProfileLayout({
 }) {
   const { airtableUser } = useAuthContext();
   const isTeacher = airtableUser?.fields.role === 'professor';
+  const isStudent = airtableUser?.fields.role === 'aluno';
   const pathname = usePathname();
 
   const menuItems = [
@@ -23,6 +24,11 @@ export default function ProfileLayout({
       href: '/profile/courses',
       label: 'Meus Cursos',
       show: isTeacher
+    },
+    {
+      href: '/profile/enrolled',
+      label: 'Cursos Matriculados',
+      show: isStudent
     },
     {
       href: '/profile/students',

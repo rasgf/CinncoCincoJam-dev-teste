@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { SunIcon, MoonIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { SunIcon, MoonIcon, InformationCircleIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { FullScreenLoading } from '@/components/common/Loading';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { PasswordModal } from '@/components/admin/PasswordModal';
@@ -58,8 +58,8 @@ export default function DashboardLayout({
     }
   };
 
-  // Função para verificar se já está na página do camarim
-  const handleCamarimClick = (e: React.MouseEvent, href: string) => {
+  // Função para verificar se já está na página de perfil
+  const handleProfileClick = (e: React.MouseEvent, href: string) => {
     if (pathname === href) {
       e.preventDefault();
       
@@ -87,7 +87,12 @@ export default function DashboardLayout({
   }
 
   const menuItems = [
-    { href: '/profile', label: 'Camarim' },
+    {
+      label: 'Meu Perfil',
+      path: '/profile',
+      icon: UserCircleIcon,
+      message: 'Você já está no seu perfil!',
+    },
     { href: '/courses', label: 'Cursos' },
     { href: '/apps-pro', label: 'Apps PRO' },
   ];
@@ -106,9 +111,9 @@ export default function DashboardLayout({
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 {menuItems.map((item) => (
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={(e) => item.href === '/profile' && handleCamarimClick(e, item.href)}
+                    key={item.path || item.href}
+                    href={item.path || item.href}
+                    onClick={(e) => item.path === '/profile' && handleProfileClick(e, item.path)}
                     className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-gray-100 border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
                   >
                     {item.label}
@@ -123,7 +128,7 @@ export default function DashboardLayout({
                     href="/admin"
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
                   >
-                    Administração
+                    Painel de Controle
                   </Link>
                   <Link
                     href="/admin/professors/pending"
@@ -179,9 +184,9 @@ export default function DashboardLayout({
 
                 {menuItems.map((item) => (
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={(e) => item.href === '/profile' && handleCamarimClick(e, item.href)}
+                    key={item.path || item.href}
+                    href={item.path || item.href}
+                    onClick={(e) => item.path === '/profile' && handleProfileClick(e, item.path)}
                     className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
                     {item.label}
@@ -193,7 +198,7 @@ export default function DashboardLayout({
                       href="/admin"
                       className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-3 py-2 rounded-md text-sm font-medium"
                     >
-                      Administração
+                      Painel de Controle
                     </Link>
                     <Link
                       href="/admin/professors/pending"
@@ -243,14 +248,14 @@ export default function DashboardLayout({
         </div>
       </nav>
 
-      {/* Mensagem de "Você já está no camarim" */}
+      {/* Mensagem de "Você já está no perfil" */}
       {showCamarimMessage && (
         <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg ${isFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}>
           <div className="flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
             </svg>
-            <span>Você já está no seu camarim!</span>
+            <span>Você já está no seu perfil!</span>
             <button 
               onClick={() => {
                 setIsFadingOut(true);

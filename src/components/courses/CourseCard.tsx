@@ -4,8 +4,10 @@ import React from 'react';
 import Image from 'next/image';
 import { PaymentType, RecurrenceInterval } from '@/types/course';
 import { ProxyImage } from '../common/ProxyImage';
+import { StarRating } from '@/components/common/StarRating';
 
 export interface CourseCardProps {
+  id?: string;
   title: string;
   description: string;
   thumbnail?: string;
@@ -16,13 +18,17 @@ export interface CourseCardProps {
   status?: string;
   what_will_learn?: string;
   requirements?: string;
+  rating?: number;
+  ratingCount?: number;
   paymentType?: PaymentType;
   recurrenceInterval?: RecurrenceInterval;
   installments?: boolean;
   installmentCount?: number;
+  onClick?: () => void;
 }
 
 export default function CourseCard({
+  id,
   title,
   description,
   thumbnail,
@@ -33,10 +39,13 @@ export default function CourseCard({
   status,
   what_will_learn,
   requirements,
+  rating = 0,
+  ratingCount = 0,
   paymentType,
   recurrenceInterval,
   installments,
-  installmentCount
+  installmentCount,
+  onClick
 }: CourseCardProps) {
   
   const formatPrice = (price: number) => {
@@ -76,7 +85,10 @@ export default function CourseCard({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 transition-all hover:shadow-md">
+    <div 
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden cursor-pointer transition-all hover:shadow-lg"
+      onClick={onClick}
+    >
       <div className="relative h-48">
         {thumbnail ? (
           <ProxyImage
@@ -101,9 +113,23 @@ export default function CourseCard({
         )}
       </div>
       
-      <div className="p-4">
-        <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-1 line-clamp-1">{title}</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{description}</p>
+      <div className="p-5">
+        <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">
+          {title}
+        </h3>
+        
+        {rating > 0 && (
+          <div className="flex items-center mb-2">
+            <StarRating initialRating={rating} readOnly size="sm" />
+            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+              {rating.toFixed(1)} ({ratingCount})
+            </span>
+          </div>
+        )}
+        
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-3">
+          {description}
+        </p>
         
         <div className="flex items-center justify-between">
           {price !== undefined && (

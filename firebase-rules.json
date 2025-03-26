@@ -1,0 +1,12 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "professors": {
+      ".indexOn": ["status", "user_id"]
+    },
+    "video_ratings": {
+      ".indexOn": ["course_id", "video_id"]
+    }
+  }
+} 

@@ -21,6 +21,9 @@ import {
 import { updateProfile } from '@/services/users';
 import { getUserByUid, updateUser, deleteUser, collections } from '@/services/firebase';
 import { deleteUser as deleteFirebaseUser } from 'firebase/auth';
+import { toast } from 'react-hot-toast';
+import Link from 'next/link';
+import Image from 'next/image';
 
 const getRoleDisplay = (role: string) => {
   switch (role) {
@@ -462,7 +465,11 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Informações Pessoais</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">

@@ -10,11 +10,12 @@ import { Course, VideoContent } from '@/types/course';
 import { VideoPlayer } from '@/components/common/VideoPlayer';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Button } from '@/components/common/Button';
+import { VideoRatingCard } from '@/components/courses/VideoRatingCard';
 
 export default function CoursePlayerPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { airtableUser } = useAuthContext();
+  const { airtableUser, user } = useAuthContext();
   const [course, setCourse] = useState<Course | null>(null);
   const [contents, setContents] = useState<VideoContent[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null);
@@ -42,9 +43,12 @@ export default function CoursePlayerPage() {
                         courseData.fields.professor_id === airtableUser.id;
       const isAdmin = airtableUser?.fields.role === 'admin';
       
+      // Definir a variável fora do bloco condicional
+      let enrollmentCheck = false;
+      
       // Se não for professor do curso nem admin, verificar matrícula
       if (!isTeacher && !isAdmin) {
-        const enrollmentCheck = await checkEnrollment(airtableUser?.id || '', id as string);
+        enrollmentCheck = await checkEnrollment(airtableUser?.id || '', id as string);
         setHasAccess(enrollmentCheck);
       } else {
         // Professores do curso e admins têm acesso automático
@@ -156,33 +160,45 @@ export default function CoursePlayerPage() {
 
           {/* Área principal com o player de vídeo */}
           <div className="flex-1">
-            <Card>
-              {selectedVideo ? (
-                <div className="space-y-4">
-                  <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                    <VideoPlayer 
-                      videoId={selectedVideo.youtubeUrl}
-                      title={selectedVideo.title}
-                      onError={handleVideoError}
-                    />
+            <div className="space-y-6">
+              <Card>
+                {selectedVideo ? (
+                  <div className="space-y-4">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                      <VideoPlayer 
+                        videoId={selectedVideo.youtubeUrl}
+                        title={selectedVideo.title}
+                        onError={handleVideoError}
+                      />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                        {selectedVideo.title}
+                      </h2>
+                      <p className="mt-2 text-gray-600 dark:text-gray-400">
+                        {course.fields.description}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                      {selectedVideo.title}
-                    </h2>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400">
-                      {course.fields.description}
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Selecione uma aula para começar
                     </p>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Selecione uma aula para começar
-                  </p>
-                </div>
+                )}
+              </Card>
+
+              {/* Componente de Avaliação */}
+              {selectedVideo && user && (
+                <VideoRatingCard
+                  userId={user.uid}
+                  courseId={id as string}
+                  videoId={selectedVideo.id}
+                  videoTitle={selectedVideo.title}
+                />
               )}
-            </Card>
+            </div>
           </div>
         </div>
       </div>

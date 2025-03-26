@@ -8,6 +8,7 @@ import { Input } from '@/components/common/Input';
 import { getAllCourses } from '@/services/firebase-courses';
 import { getAllUsers } from '@/services/firebase';
 import { createEnrollment, checkEnrollment, getAllEnrollments, EnrollmentWithDetails } from '@/services/firebase-enrollments';
+import { getProfessorsWithCourses } from '@/services/firebase-professors';
 import { Course } from '@/types/course';
 import { toast } from 'react-hot-toast';
 
@@ -26,17 +27,20 @@ export default function AdminEnrollmentsPage() {
   const [enrollmentSearchTerm, setEnrollmentSearchTerm] = useState('');
   const [filteredEnrollments, setFilteredEnrollments] = useState<EnrollmentWithDetails[]>([]);
   const [showEnrollments, setShowEnrollments] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'byProfessor'>('all');
+  const [professorsWithCourses, setProfessorsWithCourses] = useState<any[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         
-        // Carregar cursos, usuários e matrículas
-        const [coursesData, usersData, enrollmentsData] = await Promise.all([
+        // Carregar cursos, usuários, matrículas e professores com cursos
+        const [coursesData, usersData, enrollmentsData, professorsData] = await Promise.all([
           getAllCourses(),
           getAllUsers(),
-          getAllEnrollments()
+          getAllEnrollments(),
+          getProfessorsWithCourses()
         ]);
         
         // Filtrar apenas cursos publicados
@@ -44,18 +48,24 @@ export default function AdminEnrollmentsPage() {
           course.fields.status === 'published'
         );
         
-        // Filtrar apenas usuários com papel de aluno
+        // Filtrar apenas usuários com papel de aluno (em português, não 'student')
         const studentUsers = usersData.filter(user => 
           user.fields.role === 'aluno'
         );
+        
+        console.log('Total de usuários:', usersData.length);
+        console.log('Total de alunos encontrados:', studentUsers.length);
+        console.log('Exemplo de papel de usuário:', usersData[0]?.fields?.role);
         
         setCourses(publishedCourses);
         setUsers(studentUsers);
         setSearchResults(studentUsers);
         setEnrollments(enrollmentsData);
         setFilteredEnrollments(enrollmentsData);
+        setProfessorsWithCourses(professorsData);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar dados. Tente novamente.');
       } finally {
         setLoading(false);
       }
@@ -217,51 +227,152 @@ export default function AdminEnrollmentsPage() {
 
       {!showEnrollments ? (
         <>
+          {/* Abas para escolher entre todos os cursos ou cursos por professor */}
+          <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+            <ul className="flex flex-wrap -mb-px text-sm font-medium text-center">
+              <li className="mr-2">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`inline-block p-4 rounded-t-lg ${
+                    activeTab === 'all'
+                      ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
+                      : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-600 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  Todos os Cursos
+                </button>
+              </li>
+              <li className="mr-2">
+                <button
+                  onClick={() => setActiveTab('byProfessor')}
+                  className={`inline-block p-4 rounded-t-lg ${
+                    activeTab === 'byProfessor'
+                      ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
+                      : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-600 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  Cursos por Professor
+                </button>
+              </li>
+            </ul>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Seleção de Curso */}
+            {/* Seleção de Curso - muda conforme a aba ativa */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
                 Selecione o Curso
               </h2>
 
-              {courses.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400">Nenhum curso publicado disponível.</p>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    {courses.map((course) => (
-                      <label 
-                        key={course.id}
-                        className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors
-                          ${selectedCourse === course.id 
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400' 
-                            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                          }`}
-                      >
-                        <input
-                          type="radio"
-                          name="course"
-                          value={course.id}
-                          checked={selectedCourse === course.id}
-                          onChange={() => setSelectedCourse(course.id)}
-                          className="h-4 w-4 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-400"
-                        />
-                        <div className="flex-1 ml-2">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{course.fields.title}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            {course.fields.description?.substring(0, 100)}
-                            {course.fields.description?.length > 100 ? '...' : ''}
-                          </p>
-                          <div className="mt-2 flex items-center text-sm">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
-                              {course.fields.price ? `R$ ${course.fields.price}` : 'Gratuito'}
-                            </span>
+              {activeTab === 'all' ? (
+                // Exibição de todos os cursos
+                courses.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">Nenhum curso publicado disponível.</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      {courses.map((course) => (
+                        <label 
+                          key={course.id}
+                          className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors
+                            ${selectedCourse === course.id 
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400' 
+                              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            }`}
+                        >
+                          <input
+                            type="radio"
+                            name="course"
+                            value={course.id}
+                            checked={selectedCourse === course.id}
+                            onChange={() => setSelectedCourse(course.id)}
+                            className="h-4 w-4 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-400"
+                          />
+                          <div className="flex-1 ml-2">
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{course.fields.title}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {course.fields.description?.substring(0, 100)}
+                              {course.fields.description?.length > 100 ? '...' : ''}
+                            </p>
+                            <div className="mt-2 flex items-center text-sm">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                {course.fields.price ? `R$ ${course.fields.price}` : 'Gratuito'}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </label>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ) : (
+                // Exibição de cursos agrupados por professor
+                professorsWithCourses.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">Nenhum professor com cursos disponíveis.</p>
+                ) : (
+                  <div className="space-y-6">
+                    {professorsWithCourses.map((professor) => (
+                      <div key={professor.id} className="space-y-3">
+                        <h3 className="font-medium text-gray-800 dark:text-gray-200 p-2 bg-gray-100 dark:bg-gray-700 rounded flex justify-between items-center">
+                          <span>Professor: {professor.fields.name || professor.fields.email}</span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            professor.fields.status === 'approved' 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
+                              : professor.fields.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
+                            {professor.fields.status === 'approved' 
+                              ? 'Aprovado' 
+                              : professor.fields.status === 'pending' 
+                              ? 'Pendente' 
+                              : professor.fields.status}
+                          </span>
+                        </h3>
+                        
+                        {professor.courses && professor.courses.length > 0 ? (
+                          <div className="pl-2 space-y-3">
+                            {professor.courses.map((course: any) => (
+                              <label 
+                                key={course.id}
+                                className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors
+                                  ${selectedCourse === course.id 
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400' 
+                                    : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                  }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="course"
+                                  value={course.id}
+                                  checked={selectedCourse === course.id}
+                                  onChange={() => setSelectedCourse(course.id)}
+                                  className="h-4 w-4 text-blue-600 dark:text-blue-500 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                />
+                                <div className="flex-1 ml-2">
+                                  <p className="font-medium text-gray-900 dark:text-gray-100">{course.fields.title}</p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    {course.fields.description?.substring(0, 100)}
+                                    {course.fields.description?.length > 100 ? '...' : ''}
+                                  </p>
+                                  <div className="mt-2 flex items-center text-sm">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                      {course.fields.price ? `R$ ${course.fields.price}` : 'Gratuito'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 pl-4">
+                            Este professor não possui cursos publicados.
+                          </p>
+                        )}
+                      </div>
                     ))}
                   </div>
-                </div>
+                )
               )}
             </div>
 

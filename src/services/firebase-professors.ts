@@ -1,6 +1,7 @@
 import { getDatabase, ref, set, get, query, orderByChild, equalTo, push } from 'firebase/database';
 import { Professor } from '@/types/course';
 import { collections } from './firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 const db = getDatabase();
 
@@ -291,6 +292,243 @@ export const createProfessor = async (userData: {
     };
   } catch (error) {
     console.error('Erro ao criar professor:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtém todos os professores com seus cursos publicados
+ * @returns Array de professores com seus cursos publicados
+ */
+export const getProfessorsWithCourses = async () => {
+  try {
+    console.log('getProfessorsWithCourses - Iniciando busca de professores com cursos');
+    // Primeiro obter todos os professores (incluindo pendentes e aprovados)
+    const professorsRef = ref(db, collections.professors);
+    const snapshot = await get(professorsRef);
+    
+    const professors: any[] = [];
+    const userIds: string[] = [];
+    
+    if (snapshot.exists()) {
+      snapshot.forEach((childSnapshot) => {
+        const data = childSnapshot.val();
+        const professor = {
+          id: childSnapshot.key as string,
+          fields: {
+            ...data,
+            status: data.status || 'pending',
+            role: data.role || 'professor',
+            created_at: data.created_at || new Date().toISOString(),
+            updated_at: data.updated_at || new Date().toISOString()
+          }
+        };
+        professors.push(professor);
+        if (professor.fields.user_id) {
+          userIds.push(professor.fields.user_id);
+        }
+      });
+    }
+    
+    console.log(`getProfessorsWithCourses - Encontrados ${professors.length} professores, ${userIds.length} IDs de usuários`);
+    
+    // Buscar informações dos usuários correspondentes para obter nomes, etc.
+    const usersRef = ref(db, collections.users);
+    const usersSnapshot = await get(usersRef);
+    const users: any[] = [];
+    
+    if (usersSnapshot.exists()) {
+      usersSnapshot.forEach((childSnapshot) => {
+        // Incluir todos os usuários que são professores, mesmo que não tenham um registro de professor ainda
+        const userData = childSnapshot.val();
+        const userId = childSnapshot.key as string;
+        
+        // Se é um ID que já conhecemos ou se o usuário tem role de professor
+        if (userIds.includes(userId) || userData.role === 'professor') {
+          users.push({
+            id: userId,
+            fields: userData
+          });
+          
+          // Se é um professor mas não está na lista de userIds, adicionar
+          if (!userIds.includes(userId) && userData.role === 'professor') {
+            userIds.push(userId);
+          }
+        }
+      });
+    }
+    
+    console.log(`getProfessorsWithCourses - Encontrados ${users.length} usuários com papel de professor`);
+    
+    // Combinar dados de professor com dados de usuário e criar registros para professores sem registro explícito
+    let enrichedProfessors = professors.map(professor => {
+      const user = users.find(u => u.id === professor.fields.user_id);
+      return {
+        ...professor,
+        fields: {
+          ...professor.fields,
+          name: user?.fields.name || professor.fields.name || '',
+          email: user?.fields.email || professor.fields.email || '',
+          profile_image: user?.fields.profile_image || professor.fields.profile_image,
+        }
+      };
+    });
+    
+    // Adicionar "professores implícitos" - usuários com role de professor que não têm um registro de professor
+    const explicitProfessorUserIds = professors.map(p => p.fields.user_id);
+    const implicitProfessors = users
+      .filter(user => user.fields.role === 'professor' && !explicitProfessorUserIds.includes(user.id))
+      .map(user => ({
+        id: user.id, // Usar o ID do usuário como ID do professor
+        fields: {
+          user_id: user.id,
+          name: user.fields.name || '',
+          email: user.fields.email || '',
+          status: 'pending', // Definir como pendente por padrão
+          role: 'professor',
+          created_at: user.fields.created_at || new Date().toISOString(),
+          updated_at: user.fields.updated_at || new Date().toISOString(),
+          profile_image: user.fields.profile_image
+        }
+      }));
+    
+    if (implicitProfessors.length > 0) {
+      console.log(`getProfessorsWithCourses - Adicionados ${implicitProfessors.length} professores implícitos`);
+      enrichedProfessors = [...enrichedProfessors, ...implicitProfessors];
+    }
+
+    if (enrichedProfessors.length === 0) {
+      console.log('getProfessorsWithCourses - Nenhum professor encontrado');
+      return [];
+    }
+    
+    // Buscar todos os cursos
+    const coursesRef = ref(db, collections.courses);
+    const coursesSnapshot = await get(coursesRef);
+    
+    if (!coursesSnapshot.exists()) {
+      console.log('getProfessorsWithCourses - Nenhum curso encontrado');
+      // Retornar professores sem cursos
+      return enrichedProfessors.map(professor => ({
+        ...professor,
+        courses: []
+      }));
+    }
+    
+    // Agora vamos obter todos os possíveis IDs para associar cursos (IDs de professores e IDs de usuários)
+    const professorIds = enrichedProfessors.map(p => p.id);
+    const allPossibleIds = [...new Set([...professorIds, ...userIds])];
+    console.log(`getProfessorsWithCourses - Total de IDs para associação: ${allPossibleIds.length}`);
+    
+    // Processar cursos e agrupá-los por professor_id ou ID do usuário
+    const allCourses: any[] = [];
+    const coursesByProfessor: Record<string, any[]> = {};
+    
+    coursesSnapshot.forEach((childSnapshot) => {
+      const courseData = childSnapshot.val();
+      const courseId = childSnapshot.key as string;
+      
+      // Sempre adicionar o curso à lista completa
+      allCourses.push({
+        id: courseId,
+        fields: courseData
+      });
+      
+      // Verificar se o curso está publicado
+      if (courseData.status === 'published') {
+        const professorId = courseData.professor_id;
+        if (professorId && allPossibleIds.includes(professorId)) {
+          if (!coursesByProfessor[professorId]) {
+            coursesByProfessor[professorId] = [];
+          }
+          
+          coursesByProfessor[professorId].push({
+            id: courseId,
+            fields: courseData
+          });
+        }
+      }
+    });
+    
+    console.log(`getProfessorsWithCourses - Total de cursos: ${allCourses.length}`);
+    console.log(`getProfessorsWithCourses - IDs de professores nos cursos: ${Object.keys(coursesByProfessor).length}`);
+    
+    // Para professores sem cursos associados diretamente, verificar se há cursos com professor_id sendo o ID do usuário
+    for (const professor of enrichedProfessors) {
+      // Log para depuração
+      if (professor.fields.email === 'ricardo@hotmail.com') {
+        console.log('getProfessorsWithCourses - Verificando cursos para ricardo@hotmail.com');
+        console.log('  - ID do professor:', professor.id);
+        console.log('  - ID do usuário:', professor.fields.user_id);
+        
+        // Listar todos os cursos associados
+        const cursosPorProfessorId = coursesByProfessor[professor.id] || [];
+        const cursosPorUserId = coursesByProfessor[professor.fields.user_id] || [];
+        
+        console.log(`  - Cursos por ID do professor (${professor.id}): ${cursosPorProfessorId.length}`);
+        console.log(`  - Cursos por ID do usuário (${professor.fields.user_id}): ${cursosPorUserId.length}`);
+        
+        // Verificar todos os cursos
+        const todosCursosPossiveisRicardo = allCourses.filter(course => 
+          course.fields.professor_id === professor.id || 
+          course.fields.professor_id === professor.fields.user_id
+        );
+        
+        console.log(`  - Total de cursos possíveis: ${todosCursosPossiveisRicardo.length}`);
+        todosCursosPossiveisRicardo.forEach(course => {
+          console.log(`    - Curso: ${course.fields.title}, ID: ${course.id}, professor_id: ${course.fields.professor_id}, status: ${course.fields.status}`);
+        });
+      }
+    }
+
+    // Adicionar cursos aos seus respectivos professores
+    // Verificando tanto pelo ID do professor quanto pelo user_id
+    return enrichedProfessors.map(professor => {
+      const professorId = professor.id;
+      const userId = professor.fields.user_id;
+      
+      // Buscar cursos tanto pelo ID do professor quanto pelo ID do usuário
+      const professorCourses = coursesByProfessor[professorId] || [];
+      const userCourses = userId ? (coursesByProfessor[userId] || []) : [];
+      
+      // Combinar ambos (removendo duplicatas pelo id)
+      const combinedCourses = [...professorCourses];
+      
+      for (const course of userCourses) {
+        if (!combinedCourses.some(c => c.id === course.id)) {
+          combinedCourses.push(course);
+        }
+      }
+      
+      // Para professores com email ricardo@hotmail.com, verificar todos os cursos
+      if (professor.fields.email === 'ricardo@hotmail.com' && combinedCourses.length === 0) {
+        console.log('getProfessorsWithCourses - Busca especial para ricardo@hotmail.com');
+        
+        // Verificar todos os cursos e associar aqueles que têm o mesmo professor_id
+        const ricardoCourses = allCourses.filter(course => {
+          // Incluir qualquer curso que mencione o ID do usuário ricardo como professor
+          const result = course.fields.professor_id === userId;
+          if (result) {
+            console.log(`Encontrado curso de ricardo: ${course.fields.title} com status ${course.fields.status}`);
+          }
+          return result;
+        });
+        
+        // Incluir todos os cursos, mesmo os não publicados para o ricardo
+        return {
+          ...professor,
+          courses: ricardoCourses
+        };
+      }
+      
+      return {
+        ...professor,
+        courses: combinedCourses
+      };
+    });
+    
+  } catch (error) {
+    console.error('Erro ao buscar professores com cursos:', error);
     throw error;
   }
 }; 

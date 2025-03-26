@@ -255,4 +255,121 @@ export const getAllEnrollments = async (): Promise<EnrollmentWithDetails[]> => {
     console.error('Erro ao buscar matrículas:', error);
     throw error;
   }
+};
+
+export interface UserEnrollmentWithCourse {
+  id: string;
+  fields: {
+    course_id: string;
+    professor_id: string;
+    status: string;
+    progress: number;
+    created_at: string;
+    updated_at: string;
+    courseName: string;
+    courseDescription: string;
+    courseImage: string;
+    professorName: string;
+    rating?: number;
+    ratingCount?: number;
+  };
+}
+
+export const getUserEnrollments = async (userId: string): Promise<UserEnrollmentWithCourse[]> => {
+  try {
+    // Buscar todas as matrículas do usuário
+    const enrollmentsRef = ref(db, collections.enrollments);
+    const userQuery = query(enrollmentsRef, orderByChild('user_id'), equalTo(userId));
+    const snapshot = await get(userQuery);
+    
+    if (!snapshot.exists()) {
+      return [];
+    }
+    
+    const enrollments: any[] = [];
+    const courseIds = new Set<string>();
+    const professorIds = new Set<string>();
+    
+    snapshot.forEach((childSnapshot) => {
+      const enrollmentData = childSnapshot.val();
+      const enrollmentId = childSnapshot.key as string;
+      
+      enrollments.push({
+        id: enrollmentId,
+        fields: enrollmentData
+      });
+      
+      courseIds.add(enrollmentData.course_id);
+      professorIds.add(enrollmentData.professor_id);
+    });
+    
+    // Buscar dados dos cursos e professores
+    const [coursesSnapshot, usersSnapshot] = await Promise.all([
+      get(ref(db, collections.courses)),
+      get(ref(db, collections.users))
+    ]);
+    
+    const courses = new Map<string, any>();
+    const professors = new Map<string, any>();
+    
+    if (coursesSnapshot.exists()) {
+      coursesSnapshot.forEach((child) => {
+        if (courseIds.has(child.key as string)) {
+          courses.set(child.key as string, child.val());
+        }
+      });
+    }
+    
+    if (usersSnapshot.exists()) {
+      usersSnapshot.forEach((child) => {
+        if (professorIds.has(child.key as string)) {
+          professors.set(child.key as string, child.val());
+        }
+      });
+    }
+    
+    // Buscar avaliações para cada curso
+    const { getCourseAverageRating } = await import('./firebase-ratings');
+    const ratingsPromises = Array.from(courseIds).map(async (courseId) => {
+      try {
+        const ratingData = await getCourseAverageRating(courseId);
+        return { courseId, rating: ratingData.average, count: ratingData.count };
+      } catch (error) {
+        console.error(`Erro ao carregar avaliações para o curso ${courseId}:`, error);
+        return { courseId, rating: 0, count: 0 };
+      }
+    });
+    
+    const ratingsResults = await Promise.all(ratingsPromises);
+    const ratingsMap = new Map<string, { rating: number, count: number }>();
+    ratingsResults.forEach(result => {
+      ratingsMap.set(result.courseId, { rating: result.rating, count: result.count });
+    });
+    
+    // Combinar dados de matrículas com cursos e professores
+    return enrollments.map(enrollment => {
+      const course = courses.get(enrollment.fields.course_id) || {};
+      const professor = professors.get(enrollment.fields.professor_id) || {};
+      const ratings = ratingsMap.get(enrollment.fields.course_id) || { rating: 0, count: 0 };
+      
+      // Verificar ambas as propriedades possíveis para a imagem
+      const courseImage = course.image || course.thumbnail || '';
+      
+      return {
+        id: enrollment.id,
+        fields: {
+          ...enrollment.fields,
+          courseName: course.title || 'Curso não encontrado',
+          courseDescription: course.description || '',
+          courseImage,
+          professorName: professor.name || 'Professor não encontrado',
+          rating: ratings.rating,
+          ratingCount: ratings.count
+        }
+      };
+    });
+  } catch (error) {
+    console.error('Erro ao buscar matrículas do usuário:', error);
+    throw error;
+  }
 }; 
