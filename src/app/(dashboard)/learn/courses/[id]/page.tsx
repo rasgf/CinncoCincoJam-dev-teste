@@ -1,42 +1,71 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { getCourseById } from '@/services/firebase-courses';
 import { getCourseContents } from '@/services/firebase-course-contents';
+import { checkEnrollment } from '@/services/firebase-enrollments';
 import { Card } from '@/components/common/Card';
 import { Course, VideoContent } from '@/types/course';
 import { VideoPlayer } from '@/components/common/VideoPlayer';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { Button } from '@/components/common/Button';
 
 export default function CoursePlayerPage() {
   const { id } = useParams();
+  const router = useRouter();
+  const { airtableUser } = useAuthContext();
   const [course, setCourse] = useState<Course | null>(null);
   const [contents, setContents] = useState<VideoContent[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<VideoContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [videoError, setVideoError] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessChecking, setAccessChecking] = useState(true);
 
   useEffect(() => {
-    loadCourseAndContents();
-  }, [id]);
+    if (airtableUser) {
+      loadCourseAndContents();
+    }
+  }, [id, airtableUser]);
 
   const loadCourseAndContents = async () => {
     try {
       setLoading(true);
-      const [courseData, contentsData] = await Promise.all([
-        getCourseById(id as string),
-        getCourseContents(id as string)
-      ]);
       
+      // Carregar o curso primeiro
+      const courseData = await getCourseById(id as string);
       setCourse(courseData);
-      setContents(contentsData);
       
-      // Selecionar o primeiro vídeo disponível
-      if (contentsData.length > 0) {
-        setSelectedVideo(contentsData[0]);
+      // Verificar se o usuário tem acesso ao curso (é professor do curso ou está matriculado)
+      const isTeacher = airtableUser?.fields.role === 'professor' && 
+                        courseData.fields.professor_id === airtableUser.id;
+      const isAdmin = airtableUser?.fields.role === 'admin';
+      
+      // Se não for professor do curso nem admin, verificar matrícula
+      if (!isTeacher && !isAdmin) {
+        const enrollmentCheck = await checkEnrollment(airtableUser?.id || '', id as string);
+        setHasAccess(enrollmentCheck);
+      } else {
+        // Professores do curso e admins têm acesso automático
+        setHasAccess(true);
+      }
+      
+      setAccessChecking(false);
+      
+      // Se tem acesso, carrega o conteúdo do curso
+      if (isTeacher || isAdmin || enrollmentCheck) {
+        const contentsData = await getCourseContents(id as string);
+        setContents(contentsData);
+        
+        // Selecionar o primeiro vídeo disponível
+        if (contentsData.length > 0) {
+          setSelectedVideo(contentsData[0]);
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar curso:', error);
+      setAccessChecking(false);
     } finally {
       setLoading(false);
     }
@@ -47,7 +76,7 @@ export default function CoursePlayerPage() {
     setVideoError(error);
   };
 
-  if (loading) {
+  if (loading || accessChecking) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -63,12 +92,43 @@ export default function CoursePlayerPage() {
     );
   }
 
+  // Se não tem acesso, mostrar mensagem e botão para retornar à página de cursos
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Acesso Não Autorizado
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            Você não tem acesso a este curso. Para acessar o conteúdo, você precisa estar matriculado.
+          </p>
+          <div className="flex justify-center gap-4">
+            <Button
+              onClick={() => router.push('/courses')}
+              className="w-auto"
+            >
+              Ver Outros Cursos
+            </Button>
+            <Button
+              onClick={() => router.push(`/courses/${id}`)}
+              variant="outline"
+              className="w-auto"
+            >
+              Saiba Mais Sobre Este Curso
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex gap-6">
+        <div className="flex flex-col md:flex-row gap-6">
           {/* Sidebar com lista de aulas */}
-          <div className="w-80 flex-shrink-0">
+          <div className="w-full md:w-80 flex-shrink-0">
             <Card>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {course.fields.title}

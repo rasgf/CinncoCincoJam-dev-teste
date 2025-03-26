@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { getCourseById } from '@/services/firebase-courses';
+import { checkEnrollment } from '@/services/firebase-enrollments';
 import { Button } from '@/components/common/Button';
 import { Loading } from '@/components/common/Loading';
 import { Course } from '@/types/course';
 import { ProxyImage } from '@/components/common/ProxyImage';
+import { PaymentModal } from '@/components/payments/PaymentModal';
 
 interface CourseFields {
   title: string;
@@ -38,6 +40,8 @@ export default function CoursePage() {
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentChecking, setEnrollmentChecking] = useState(true);
 
   // Função auxiliar para converter what_will_learn em array
   const getWhatWillLearn = (items?: string | string[]): string[] => {
@@ -47,8 +51,35 @@ export default function CoursePage() {
   };
 
   useEffect(() => {
-    loadCourse();
-  }, [id]);
+    if (id && airtableUser) {
+      loadCourse();
+      checkUserEnrollment();
+    }
+  }, [id, airtableUser]);
+
+  const checkUserEnrollment = async () => {
+    if (!airtableUser || !id) return;
+
+    try {
+      const isAdmin = airtableUser?.fields.role === 'admin';
+      const isTeacher = airtableUser?.fields.role === 'professor';
+      
+      // Admins e professores não precisam estar matriculados para acessar
+      if (isAdmin || isTeacher) {
+        setIsEnrolled(true);
+        setEnrollmentChecking(false);
+        return;
+      }
+      
+      // Verificar se o aluno está matriculado
+      const enrolled = await checkEnrollment(airtableUser.id, id as string);
+      setIsEnrolled(enrolled);
+    } catch (error) {
+      console.error('Erro ao verificar matrícula:', error);
+    } finally {
+      setEnrollmentChecking(false);
+    }
+  };
 
   const loadCourse = async () => {
     try {
@@ -392,18 +423,34 @@ export default function CoursePage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  onClick={handleBuyCourse}
-                  className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600"
-                >
-                  Comprar Curso
-                </Button>
+              {isEnrolled && (
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
+                  <div className="flex items-center">
+                    <svg className="h-5 w-5 text-green-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Você já está matriculado neste curso
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {!isEnrolled && course.fields.price > 0 && airtableUser?.fields.role !== 'admin' && (
+                  <Button
+                    onClick={handleBuyCourse}
+                    className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600"
+                  >
+                    Comprar Curso
+                  </Button>
+                )}
+                
                 <Button
                   onClick={handleStartCourse}
-                  className="w-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600"
+                  className={`w-full ${!isEnrolled && course.fields.price > 0 ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'}`}
                 >
-                  Começar Curso
+                  {isEnrolled ? 'Acessar Curso' : 'Começar Curso'}
                 </Button>
               </div>
             </div>
