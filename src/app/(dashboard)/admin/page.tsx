@@ -79,6 +79,16 @@ export default function AdminDashboardPage() {
             title="Professores Pendentes"
             value={stats?.pendingProfessors || 0}
             icon={<UsersIcon className="w-8 h-8 text-orange-500" />}
+            className={stats?.pendingProfessors > 0 ? "border-2 border-orange-500 dark:border-orange-400" : ""}
+            action={
+              stats?.pendingProfessors > 0 ? (
+                <Link href="/admin/professors/pending">
+                  <Button size="sm" className="mt-2 bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700">
+                    Revisar Solicitações
+                  </Button>
+                </Link>
+              ) : null
+            }
           />
         </div>
       </div>

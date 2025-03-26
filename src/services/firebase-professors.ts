@@ -136,9 +136,9 @@ export const getProfessorById = async (id: string) => {
   }
 };
 
-export const getProfessorByUserId = async (userId: string): Promise<Professor | null> => {
+export const getProfessorByUserId = async (userId: string, retryCount = 0): Promise<Professor | null> => {
   try {
-    console.log('getProfessorByUserId - Buscando professor com user_id:', userId);
+    console.log(`getProfessorByUserId - Buscando professor com user_id: ${userId} (tentativa ${retryCount + 1})`);
     
     // Primeiro, verificar se o userId é válido
     if (!userId) {
@@ -147,37 +147,57 @@ export const getProfessorByUserId = async (userId: string): Promise<Professor | 
     }
     
     const professorsRef = ref(db, collections.professors);
+    console.log('getProfessorByUserId - Buscando na coleção:', collections.professors);
+    
     const userQuery = query(professorsRef, orderByChild('user_id'), equalTo(userId));
     const snapshot = await get(userQuery);
     
     console.log('getProfessorByUserId - Resultado da busca:', snapshot.exists() ? 'Encontrado' : 'Não encontrado');
     
     if (!snapshot.exists() || snapshot.size === 0) {
-      console.log('getProfessorByUserId - Professor não encontrado, buscando dados do usuário para criar registro');
+      console.log('getProfessorByUserId - Professor não encontrado para userId:', userId);
       
-      // Se não encontrar o professor, buscar dados do usuário e criar o registro
-      const userRef = ref(db, `${collections.users}/${userId}`);
-      const userSnapshot = await get(userRef);
-      
-      if (!userSnapshot.exists()) {
-        console.error('getProfessorByUserId - Usuário não encontrado:', userId);
-        throw new Error('Usuário não encontrado');
+      // Se já tentamos várias vezes, verificar se o usuário existe e tem role de professor
+      if (retryCount >= 2) {
+        const userRef = ref(db, `${collections.users}/${userId}`);
+        const userSnapshot = await get(userRef);
+        
+        if (!userSnapshot.exists()) {
+          console.error('getProfessorByUserId - Usuário não encontrado após múltiplas tentativas:', userId);
+          return null;
+        }
+        
+        const userData = userSnapshot.val();
+        
+        // Só criar automaticamente se o usuário tiver role professor
+        if (userData.role !== 'professor') {
+          console.log('getProfessorByUserId - Usuário não tem role professor após múltiplas tentativas:', userData.role);
+          return null;
+        }
+        
+        console.log('getProfessorByUserId - Criando registro de professor após múltiplas tentativas');
+        
+        // Criar registro de professor pendente
+        return await createProfessor({
+          user_id: userId,
+          name: userData.name || '',
+          email: userData.email || '',
+          status: 'pending'
+        });
       }
       
-      const userData = userSnapshot.val();
-      console.log('getProfessorByUserId - Dados do usuário encontrados:', userData);
+      // Se ainda não tentamos muitas vezes, esperar um pouco e tentar novamente
+      console.log(`getProfessorByUserId - Tentando novamente em 500ms (tentativa ${retryCount + 1})`);
       
-      const newProfessor = await createProfessor({
-        user_id: userId,
-        name: userData.name,
-        email: userData.email,
-        status: 'active' as 'pending' | 'active' | 'inactive' // ou o status inicial apropriado
+      return new Promise((resolve) => {
+        setTimeout(async () => {
+          const result = await getProfessorByUserId(userId, retryCount + 1);
+          resolve(result);
+        }, 500);
       });
-      
-      console.log('getProfessorByUserId - Novo professor criado:', newProfessor);
-      return newProfessor;
     }
     
+    // Processar o resultado encontrado
     let professor: Professor | null = null;
     snapshot.forEach((childSnapshot) => {
       const data = childSnapshot.val();
@@ -185,15 +205,16 @@ export const getProfessorByUserId = async (userId: string): Promise<Professor | 
         id: childSnapshot.key as string,
         fields: {
           ...data,
-          status: data.status || 'pending' as 'pending' | 'active' | 'inactive',
-          role: data.role || 'professor' as 'professor',
+          user_id: data.user_id,
+          status: data.status || 'pending',
+          role: data.role || 'professor',
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString()
         }
       };
     });
     
-    console.log('getProfessorByUserId - Professor encontrado:', professor);
+    console.log('getProfessorByUserId - Professor encontrado:', professor?.fields?.status);
     return professor;
   } catch (error) {
     console.error('Erro ao buscar/criar professor:', error);
@@ -209,20 +230,60 @@ export const createProfessor = async (userData: {
   status?: "pending" | "active" | "inactive";
 }) => {
   try {
+    console.log('createProfessor - Iniciando criação com dados:', userData);
+    console.log('createProfessor - userID recebido:', userData.user_id);
+    
+    // Validação dos dados
+    if (!userData.user_id) {
+      console.error('createProfessor - user_id é obrigatório');
+      throw new Error('ID de usuário é obrigatório para criar professor');
+    }
+    
+    // Primeiro verificar se já existe um professor com este user_id
+    const professorsRef = ref(db, collections.professors);
+    const userQuery = query(professorsRef, orderByChild('user_id'), equalTo(userData.user_id));
+    const existingSnapshot = await get(userQuery);
+    
+    if (existingSnapshot.exists() && existingSnapshot.size > 0) {
+      console.log('createProfessor - Professor já existe para este user_id:', userData.user_id);
+      
+      // Retornar o professor existente
+      let existingProfessor: Professor | null = null;
+      existingSnapshot.forEach((childSnapshot) => {
+        const data = childSnapshot.val();
+        existingProfessor = {
+          id: childSnapshot.key as string,
+          fields: {
+            ...data,
+            status: data.status || 'pending',
+            updated_at: new Date().toISOString() // Atualizar timestamp
+          }
+        };
+      });
+      
+      console.log('createProfessor - Retornando professor existente:', existingProfessor);
+      return existingProfessor;
+    }
+    
+    // Criar novo professor
     const professorData = {
       user_id: userData.user_id,
-      name: userData.name,
-      email: userData.email,
-      bio: userData.bio || '',
-      status: userData.status || 'pending' as "pending" | "active" | "inactive",
-      role: 'professor' as "professor",
+      name: userData?.name || '',
+      email: userData?.email || '',
+      bio: userData?.bio || '',
+      status: userData?.status || 'pending',
+      role: 'professor',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     
-    const professorsRef = ref(db, collections.professors);
+    console.log('createProfessor - Referência da coleção:', collections.professors);
+    console.log('createProfessor - Dados do professor a criar:', professorData);
+    
     const newProfessorRef = push(professorsRef);
     await set(newProfessorRef, professorData);
+    
+    console.log('createProfessor - Professor criado com sucesso com ID:', newProfessorRef.key);
     
     return {
       id: newProfessorRef.key as string,

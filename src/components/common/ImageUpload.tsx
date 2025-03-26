@@ -16,12 +16,19 @@ export function ImageUpload({ currentImage, onImageSelect, className = '' }: Ima
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      console.log('Arquivo selecionado:', file.name, 'tamanho:', file.size, 'tipo:', file.type);
       onImageSelect(file);
       const reader = new FileReader();
       reader.onloadend = () => {
+        console.log('Prévia da imagem gerada com sucesso');
         setPreviewUrl(reader.result as string);
       };
+      reader.onerror = (error) => {
+        console.error('Erro ao gerar prévia da imagem:', error);
+      };
       reader.readAsDataURL(file);
+    } else {
+      console.log('Nenhum arquivo foi selecionado');
     }
   };
 

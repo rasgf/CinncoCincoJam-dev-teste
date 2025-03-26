@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { SunIcon, MoonIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
@@ -16,12 +16,15 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading, logout, airtableUser: firebaseUser } = useAuthContext();
   const isTeacher = firebaseUser?.fields.role === 'professor';
   const isAdmin = firebaseUser?.fields.role === 'admin';
   const [darkMode, setDarkMode] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [showCamarimMessage, setShowCamarimMessage] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -54,6 +57,30 @@ export default function DashboardLayout({
     }
   };
 
+  // Função para verificar se já está na página do camarim
+  const handleCamarimClick = (e: React.MouseEvent, href: string) => {
+    if (pathname === href) {
+      e.preventDefault();
+      
+      // Não mostrar nova mensagem se já estiver exibindo uma
+      if (showCamarimMessage) return;
+      
+      setShowCamarimMessage(true);
+      setIsFadingOut(false);
+      
+      // Iniciar fade-out após 2.5 segundos
+      setTimeout(() => {
+        setIsFadingOut(true);
+      }, 2500);
+      
+      // Remover completamente após 3 segundos
+      setTimeout(() => {
+        setShowCamarimMessage(false);
+        setIsFadingOut(false);
+      }, 3000);
+    }
+  };
+
   if (loading) {
     return <FullScreenLoading />;
   }
@@ -80,6 +107,7 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={(e) => item.href === '/profile' && handleCamarimClick(e, item.href)}
                     className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-gray-100 border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
                   >
                     {item.label}
@@ -89,12 +117,20 @@ export default function DashboardLayout({
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
               {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
-                >
-                  Administração
-                </Link>
+                <>
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
+                  >
+                    Administração
+                  </Link>
+                  <Link
+                    href="/admin/professors/pending"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 dark:focus:ring-offset-gray-800"
+                  >
+                    Professores Pendentes
+                  </Link>
+                </>
               )}
               
               {/* Nome do usuário */}
@@ -144,18 +180,27 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={(e) => item.href === '/profile' && handleCamarimClick(e, item.href)}
                     className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
                     {item.label}
                   </Link>
                 ))}
                 {isAdmin && (
-                  <Link
-                    href="/admin"
-                    className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Administração
-                  </Link>
+                  <>
+                    <Link
+                      href="/admin"
+                      className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      Administração
+                    </Link>
+                    <Link
+                      href="/admin/professors/pending"
+                      className="text-white bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      Professores Pendentes
+                    </Link>
+                  </>
                 )}
                 
                 {/* Botão de Toggle Dark Mode Mobile */}
@@ -196,6 +241,33 @@ export default function DashboardLayout({
           </div>
         </div>
       </nav>
+
+      {/* Mensagem de "Você já está no camarim" */}
+      {showCamarimMessage && (
+        <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg ${isFadingOut ? 'animate-fade-out' : 'animate-fade-in'}`}>
+          <div className="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
+            </svg>
+            <span>Você já está no seu camarim!</span>
+            <button 
+              onClick={() => {
+                setIsFadingOut(true);
+                setTimeout(() => {
+                  setShowCamarimMessage(false);
+                  setIsFadingOut(false);
+                }, 500);
+              }}
+              className="ml-4 text-white hover:text-blue-100 focus:outline-none"
+              aria-label="Fechar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 mt-16 dark:text-gray-200">
         {children}

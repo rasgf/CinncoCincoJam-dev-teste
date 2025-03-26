@@ -6,7 +6,7 @@ const db = getDatabase(app);
 
 export const collections = {
   users: 'users',
-  professors: 'professors',
+  professors: 'professores',
   courses: 'courses',
   enrollments: 'enrollments',
   affiliates: 'affiliates',

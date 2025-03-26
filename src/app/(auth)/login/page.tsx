@@ -21,6 +21,11 @@ export default function LoginPage() {
     // Verificar preferência salva
     const isDark = localStorage.getItem('darkMode') === 'true';
     setDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
 
   const toggleDarkMode = () => {

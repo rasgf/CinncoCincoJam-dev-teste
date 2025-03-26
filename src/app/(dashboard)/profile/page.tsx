@@ -19,7 +19,7 @@ import {
   BuildingLibraryIcon
 } from '@heroicons/react/24/outline';
 import { updateProfile } from '@/services/users';
-import { getUserByUid, updateUser, deleteUser } from '@/services/firebase';
+import { getUserByUid, updateUser, deleteUser, collections } from '@/services/firebase';
 import { deleteUser as deleteFirebaseUser } from 'firebase/auth';
 
 const getRoleDisplay = (role: string) => {
@@ -38,6 +38,8 @@ const getRoleDisplay = (role: string) => {
 export default function ProfilePage() {
   const { user, airtableUser: firebaseUser, refreshUser } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [dataInitialized, setDataInitialized] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
@@ -56,46 +58,208 @@ export default function ProfilePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReauthModalOpen, setIsReauthModalOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
-  const isTeacher = firebaseUser?.fields.role === 'professor';
+  const isTeacher = user && firebaseUser?.fields?.role === 'professor';
+  const [isProfessorPending, setIsProfessorPending] = useState(false);
+  const [isProfessorActive, setIsProfessorActive] = useState(false);
+  const [isRequestingApproval, setIsRequestingApproval] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
-    if (firebaseUser) {
-      setFormData({
-        name: firebaseUser.fields.name || '',
-        email: firebaseUser.fields.email || '',
-        role: firebaseUser.fields.role || '',
-        bio: firebaseUser.fields.bio || '',
-        bank_name: firebaseUser.fields.bank_name || '',
-        bank_branch: firebaseUser.fields.bank_branch || '',
-        bank_account: firebaseUser.fields.bank_account || '',
-        bank_account_type: firebaseUser.fields.bank_account_type || 'checking',
-        bank_document: firebaseUser.fields.bank_document || ''
+    const loadInitialData = async () => {
+      if (user && !initialLoadDone) {
+        console.log('ProfilePage - Carregamento inicial, forçando refresh dos dados');
+        try {
+          await refreshUser();
+          console.log('ProfilePage - Dados do usuário atualizados no carregamento inicial');
+        } catch (error) {
+          console.error('ProfilePage - Erro ao atualizar dados iniciais:', error);
+        } finally {
+          setInitialLoadDone(true);
+        }
+      }
+    };
+    
+    loadInitialData();
+  }, [user, initialLoadDone, refreshUser]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isPageLoading && user) {
+        console.log('ProfilePage - Forçando renderização após timeout');
+        setIsPageLoading(false);
+        if (!dataInitialized && user) {
+          console.log('ProfilePage - Inicializando dados básicos do usuário após timeout');
+          setFormData(prev => ({
+            ...prev,
+            name: user.displayName || '',
+            email: user.email || '',
+            role: firebaseUser?.fields?.role || 'aluno'
+          }));
+          setDataInitialized(true);
+        }
+      }
+    }, 2000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [isPageLoading, user, dataInitialized, firebaseUser?.fields?.role]);
+
+  useEffect(() => {
+    if (user && user.email) {
+      console.log('ProfilePage - Verificando email do usuário:', user.email);
+      setFormData(prev => {
+        if (!prev.email || prev.email !== user.email) {
+          console.log('ProfilePage - Atualizando email do formulário');
+          return {
+            ...prev,
+            email: user.email || ''
+          };
+        }
+        return prev;
       });
     }
-  }, [firebaseUser]);
+  }, [user]);
 
   useEffect(() => {
-    if (!user) {
+    console.log('ProfilePage - Efeito de carregamento de dados acionado');
+    
+    if (user && !firebaseUser && !dataInitialized) {
+      console.log('ProfilePage - Apenas usuário Firebase Auth disponível, inicializando dados básicos');
+      setFormData(prev => ({
+        ...prev,
+        name: user.displayName || '',
+        email: user.email || '',
+        role: 'aluno'
+      }));
+      setDataInitialized(true);
+      setIsPageLoading(false);
+    }
+    
+    if (firebaseUser) {
+      console.log('ProfilePage - Dados do usuário carregados:', firebaseUser);
+      
+      try {
+        const fields = firebaseUser.fields || {};
+        
+        setFormData({
+          name: fields.name || user?.displayName || '',
+          email: fields.email || user?.email || '',
+          role: fields.role || 'aluno',
+          bio: fields.bio || '',
+          bank_name: fields.bank_name || '',
+          bank_branch: fields.bank_branch || '',
+          bank_account: fields.bank_account || '',
+          bank_account_type: fields.bank_account_type || 'checking',
+          bank_document: fields.bank_document || ''
+        });
+        
+        console.log('ProfilePage - Formulário preenchido com dados do Firebase');
+        setDataInitialized(true);
+        setIsPageLoading(false);
+      } catch (error) {
+        console.error('ProfilePage - Erro ao processar dados do usuário:', error);
+        setIsPageLoading(false);
+      }
+    }
+  }, [firebaseUser, user, dataInitialized]);
+
+  useEffect(() => {
+    if (!user && !isPageLoading) {
+      console.log('ProfilePage - Usuário não autenticado, redirecionando para login');
       router.replace('/login');
     }
-  }, [user, router]);
+  }, [user, router, isPageLoading]);
+
+  useEffect(() => {
+    const checkProfessorStatus = async () => {
+      try {
+        if (!user) return;
+        
+        if (!firebaseUser) {
+          console.log('Verificação de status - Dados do usuário ainda não carregados');
+          return;
+        }
+
+        console.log('Verificação de status - Verificando para usuário:', user.uid);
+        console.log('Verificação de status - Dados do usuário:', firebaseUser);
+        
+        const isProfessorRole = firebaseUser?.fields?.role === 'professor';
+        console.log('Verificação de status - Usuário tem role professor:', isProfessorRole);
+        
+        if (!isProfessorRole) {
+          console.log('Verificação de status - Usuário não é professor, ignorando verificação de status');
+          setIsProfessorPending(false);
+          setIsProfessorActive(false);
+          return;
+        }
+        
+        console.log('Verificação de status - Importando serviço de professores');
+        const { getProfessorByUserId } = await import('@/services/firebase-professors');
+        
+        try {
+          console.log('Verificação de status - Buscando professor com user_id:', user.uid);
+          const professor = await getProfessorByUserId(user.uid);
+          
+          console.log('Verificação de status - Resultado:', professor);
+          
+          if (professor?.fields?.status === 'pending') {
+            console.log('Verificação de status - Status: pendente');
+            setIsProfessorPending(true);
+            setIsProfessorActive(false);
+          } else if (professor?.fields?.status === 'active') {
+            console.log('Verificação de status - Status: ativo');
+            setIsProfessorPending(false);
+            setIsProfessorActive(true);
+          } else {
+            console.log('Verificação de status - Status:', professor?.fields?.status || 'não encontrado');
+            setIsProfessorPending(false);
+            setIsProfessorActive(false);
+          }
+        } catch (professorError) {
+          console.error('Verificação de status - Erro ao buscar professor:', professorError);
+          setIsProfessorPending(false);
+          setIsProfessorActive(false);
+        }
+      } catch (error) {
+        console.error('Verificação de status - Erro geral:', error);
+        setIsProfessorPending(false);
+        setIsProfessorActive(false);
+      }
+    };
+
+    checkProfessorStatus();
+  }, [user, firebaseUser, initialLoadDone]);
 
   const handleImageSelect = (file: File) => {
     setSelectedImage(file);
   };
 
   const uploadImage = async (file: File): Promise<string> => {
+    console.log('Iniciando upload da imagem:', file.name);
     const timestamp = new Date().getTime();
     const fileName = `${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `profile_images/${user?.uid}/${fileName}`);
+    const storagePath = `profile_images/${user?.uid}/${fileName}`;
+    console.log('Caminho de armazenamento:', storagePath);
+    const storageRef = ref(storage, storagePath);
     
     try {
+      console.log('Enviando arquivo para o Firebase Storage...');
       const snapshot = await uploadBytes(storageRef, file);
+      console.log('Upload concluído, obtendo URL de download...');
       const downloadURL = await getDownloadURL(storageRef);
+      console.log('URL de download obtida:', downloadURL);
       return downloadURL;
-    } catch (error) {
-      console.error('Erro durante o upload:', error);
-      throw new Error('Falha ao fazer upload da imagem');
+    } catch (error: any) {
+      console.error('Erro detalhado durante o upload:', error);
+      console.error('Código do erro:', error.code);
+      console.error('Mensagem do erro:', error.message);
+      if (error.code === 'storage/unauthorized') {
+        throw new Error('Acesso não autorizado ao Firebase Storage. Verifique as permissões.');
+      } else if (error.code === 'storage/canceled') {
+        throw new Error('Upload cancelado.');
+      } else if (error.code === 'storage/unknown') {
+        throw new Error('Erro desconhecido durante o upload. Tente novamente mais tarde.');
+      }
+      throw new Error(`Falha ao fazer upload da imagem: ${error.message}`);
     }
   };
 
@@ -117,25 +281,31 @@ export default function ProfilePage() {
     setSuccess('');
 
     try {
-      console.log('Enviando dados do formulário:', formData);
+      console.log('Iniciando atualização de perfil...');
+      console.log('Dados do formulário:', formData);
+      console.log('Imagem selecionada:', selectedImage ? 'Sim' : 'Não');
       
-      // Preparar dados para atualização
       let imageUrl = firebaseUser?.fields.profile_image;
 
       if (selectedImage) {
+        console.log('Processando upload da nova imagem...');
         try {
           imageUrl = await uploadImage(selectedImage);
-        } catch (uploadError) {
-          throw uploadError;
+          console.log('Imagem carregada com sucesso, URL:', imageUrl);
+        } catch (uploadError: any) {
+          console.error('Erro específico no upload de imagem:', uploadError);
+          setError(`Erro no upload da imagem: ${uploadError.message}`);
+          setIsLoading(false);
+          return;
         }
       }
       
+      console.log('Preparando dados para atualização do perfil...');
       const updateData = {
         name: formData.name,
         profile_image: imageUrl,
         bio: formData.bio,
         updated_at: new Date().toISOString(),
-        // Incluindo dados bancários na atualização
         ...(isTeacher && {
           bank_name: formData.bank_name,
           bank_branch: formData.bank_branch,
@@ -145,14 +315,20 @@ export default function ProfilePage() {
         })
       };
       
+      console.log('Enviando atualização para o Firebase...');
       await updateProfile(firebaseUser.id, updateData);
+      console.log('Perfil atualizado no Firebase, atualizando dados do usuário...');
       await refreshUser();
       
+      console.log('Atualização completa!');
       setSuccess('Perfil atualizado com sucesso!');
       setSelectedImage(null);
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      setError('Erro ao atualizar perfil. Tente novamente.');
+    } catch (error: any) {
+      console.error('Erro detalhado ao atualizar perfil:', error);
+      if (error.code) {
+        console.error('Código do erro:', error.code);
+      }
+      setError(`Erro ao atualizar perfil: ${error.message || 'Verifique os logs para mais detalhes'}`);
     } finally {
       setIsLoading(false);
     }
@@ -189,8 +365,65 @@ export default function ProfilePage() {
     setIsChangePasswordModalOpen(true);
   };
 
-  if (!user || !firebaseUser) {
-    return null;
+  const handleRequestApproval = async () => {
+    try {
+      setIsRequestingApproval(true);
+      setError('');
+      
+      if (!user || !user.uid) {
+        throw new Error('Dados do usuário não disponíveis');
+      }
+      
+      console.log('Solicitando aprovação para:', user.uid);
+      
+      const { createProfessor } = await import('@/services/firebase-professors');
+      
+      // Usar o UID do Firebase Auth que é mais confiável
+      const professor = await createProfessor({
+        user_id: user.uid,
+        name: formData.name || user.displayName || '',
+        email: formData.email || user.email || '',
+        status: 'pending'
+      });
+      
+      console.log('Solicitação de professor criada/atualizada:', professor);
+      
+      // Atualizar o estado local imediatamente
+      setIsProfessorPending(true);
+      setIsProfessorActive(false);
+      
+      // Atualizar os dados do usuário no contexto
+      await refreshUser();
+      
+      setSuccess('Solicitação enviada com sucesso! Aguarde a aprovação do administrador.');
+    } catch (error: any) {
+      console.error('Erro ao solicitar aprovação:', error);
+      setError(`Erro ao solicitar aprovação: ${error.message}`);
+    } finally {
+      setIsRequestingApproval(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isPageLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Carregando dados do perfil...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -200,8 +433,36 @@ export default function ProfilePage() {
           Meu Perfil
         </h1>
 
+        {isProfessorPending && (
+          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <h3 className="text-lg font-medium text-yellow-800 dark:text-yellow-300 mb-2">
+              Solicitação de Professor Pendente
+            </h3>
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+              Sua solicitação para se tornar um professor está em análise. Você será notificado assim que for aprovada.
+            </p>
+          </div>
+        )}
+
+        {isTeacher && !isProfessorPending && !isProfessorActive && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <h3 className="text-lg font-medium text-blue-800 dark:text-blue-300 mb-2">
+              Ative seu Perfil de Professor
+            </h3>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+              Seu perfil está configurado como professor, mas você ainda não tem um registro ativo. Solicite a aprovação para acessar todas as funcionalidades de professor.
+            </p>
+            <Button 
+              onClick={handleRequestApproval} 
+              isLoading={isRequestingApproval}
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+            >
+              Solicitar Aprovação
+            </Button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Coluna da Esquerda - Avatar */}
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
@@ -222,9 +483,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Coluna da Direita - Formulário */}
           <div className="md:col-span-2 space-y-6">
-            {/* Mensagens de Feedback */}
             {error && (
               <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg">
                 {error}
@@ -237,7 +496,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Formulário Principal */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6">
                 <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
@@ -282,7 +540,7 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    {isTeacher && (
+                    {isTeacher && isProfessorActive && (
                       <>
                         <div className="space-y-1">
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -297,7 +555,6 @@ export default function ProfilePage() {
                           />
                         </div>
                         
-                        {/* Seção de Dados Bancários */}
                         <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
                             Dados Bancários para Recebimentos
@@ -339,7 +596,7 @@ export default function ProfilePage() {
                             </div>
                             
                             <div className="flex items-center space-x-3">
-                              <div className="h-5 w-5" /> {/* Espaçador para alinhamento */}
+                              <div className="h-5 w-5" />
                               <div className="w-full">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                   Tipo de Conta
@@ -390,14 +647,12 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Seção de Perigo */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6">
                 <h2 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4">
                   Zona de Perigo
                 </h2>
                 
-                {/* Alterar Senha */}
                 <div className="border-l-4 border-yellow-500 pl-4 py-2 mb-4">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Altere sua senha regularmente para manter sua conta segura.
@@ -412,7 +667,6 @@ export default function ProfilePage() {
                   </Button>
                 </div>
                 
-                {/* Deletar Conta */}
                 <div className="border-l-4 border-red-500 pl-4 py-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Uma vez deletada, sua conta não poderá ser recuperada. Por favor, tenha certeza.

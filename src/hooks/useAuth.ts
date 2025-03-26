@@ -35,18 +35,44 @@ export function useAuth() {
     return unsubscribe;
   }, []);
 
-  const signup = async (email: string, password: string, name?: string) => {
+  const signup = async (email: string, password: string, name?: string, isProfessor: boolean = false) => {
     try {
+      console.log('Signup - Iniciando registro com:', { email, isProfessor, name });
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Criar usuário no Firebase
-      await createUser({
+      const createdUser = await createUser({
         uid: userCredential.user.uid,
         email: userCredential.user.email!,
         name,
-        role: 'aluno'
+        role: isProfessor ? 'professor' : 'aluno'
       });
-
+      
+      console.log('Signup - Usuário criado no Firebase:', createdUser);
+      
+      // Se for um professor, criar o registro de professor
+      if (isProfessor) {
+        console.log('Signup - Criando registro de professor');
+        try {
+          const { createProfessor } = await import('@/services/firebase-professors');
+          const professor = await createProfessor({
+            user_id: userCredential.user.uid,
+            name: name || '',
+            email: userCredential.user.email!,
+            status: 'pending' // Professores começam com status pendente
+          });
+          
+          console.log('Signup - Registro de professor criado:', professor);
+        } catch (professorError) {
+          console.error('Signup - Erro ao criar registro de professor:', professorError);
+        }
+      }
+      
+      // Atualizar os dados do usuário localmente
+      const firebaseUserData = await getUserByUid(userCredential.user.uid);
+      setAirtableUser(firebaseUserData);
+      console.log('Signup - Dados do usuário atualizados localmente:', firebaseUserData);
+      
       return userCredential;
     } catch (error) {
       console.error('Error in signup:', error);
@@ -66,13 +92,23 @@ export function useAuth() {
   const refreshUser = async () => {
     if (user) {
       try {
+        console.log('Atualizando dados do usuário Firebase:', user.uid);
         const firebaseUserData = await getUserByUid(user.uid);
+        
+        if (!firebaseUserData) {
+          console.warn('Dados do usuário não encontrados no Firebase. Verificar se o usuário foi criado corretamente.');
+          return null;
+        }
+        
+        console.log('Dados atualizados recebidos:', firebaseUserData);
         setAirtableUser(firebaseUserData);
+        return firebaseUserData;
       } catch (error) {
         console.error('Error refreshing Firebase user:', error);
         throw error;
       }
     }
+    return null;
   };
 
   return {

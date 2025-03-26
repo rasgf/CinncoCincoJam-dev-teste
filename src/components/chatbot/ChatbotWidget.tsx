@@ -26,13 +26,13 @@ const ChatSuggestions = ({ onSuggestionClick }: { onSuggestionClick: (suggestion
 
   return (
     <div className="flex flex-col space-y-2 p-4">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Como posso ajudar hoje?</p>
+      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 font-medium">Como posso ajudar hoje?</p>
       <div className="grid grid-cols-1 gap-2">
         {suggestions.map((suggestion) => (
           <button
             key={suggestion.id}
             onClick={() => onSuggestionClick(suggestion.text)}
-            className="text-left px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="text-left px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-300 dark:border-gray-600"
           >
             {suggestion.text}
           </button>
@@ -256,20 +256,20 @@ export function ChatbotWidget() {
     <div className="fixed bottom-4 right-4 z-50">
       {isOpen ? (
         <div 
-          className={`${getChatPosition()} ${getChatDimensions()} bg-white dark:bg-gray-900 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700 transition-all duration-300`}
+          className={`${getChatPosition()} ${getChatDimensions()} bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-200 dark:border-gray-600 transition-all duration-300`}
           style={{ maxHeight: isExpanded ? '80vh' : '500px' }}
         >
           {/* Cabeçalho do chat */}
-          <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
             <h3 className="font-medium text-gray-900 dark:text-gray-100">
               Assistente CincoCincoJam
-              {isLoading && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Carregando...)</span>}
+              {isLoading && <span className="ml-2 text-xs text-gray-500 dark:text-gray-300">(Carregando...)</span>}
             </h3>
             <div className="flex space-x-2">
               {/* Botão de expandir/contrair */}
               <button
                 onClick={toggleExpanded}
-                className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-200"
                 title={isExpanded ? "Contrair chat" : "Expandir chat"}
               >
                 {isExpanded ? <MinimizeIcon size={16} /> : <ExpandIcon size={16} />}
@@ -278,7 +278,7 @@ export function ChatbotWidget() {
               {/* Botão de minimizar/maximizar */}
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
-                className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-200"
                 title={isMinimized ? "Maximizar" : "Minimizar"}
               >
                 {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
@@ -287,7 +287,7 @@ export function ChatbotWidget() {
               {/* Botão de fechar */}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-200"
                 title="Fechar chat"
               >
                 <X size={16} />
@@ -298,7 +298,7 @@ export function ChatbotWidget() {
           {!isMinimized && (
             <>
               {/* Área de mensagens */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50 dark:bg-gray-800">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -307,24 +307,24 @@ export function ChatbotWidget() {
                     }`}
                   >
                     {message.role !== 'user' && (
-                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-2">
-                        <span className="text-blue-600 dark:text-blue-300 text-xs font-bold">AI</span>
+                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-200 dark:bg-blue-800 flex items-center justify-center mr-2">
+                        <span className="text-blue-700 dark:text-blue-200 text-xs font-bold">AI</span>
                       </div>
                     )}
                     
                     <div
-                      className={`max-w-[85%] rounded-lg px-4 py-3 ${
+                      className={`max-w-[85%] rounded-lg px-4 py-3 shadow-sm ${
                         message.role === 'user'
-                          ? 'bg-blue-500 text-white rounded-tr-none'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-none'
-                      } shadow-sm`}
+                          ? 'bg-blue-600 dark:bg-blue-700 text-white rounded-tr-none'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-300 dark:border-gray-600'
+                      }`}
                     >
                       {formatMessageContent(message.content)}
                     </div>
                     
                     {message.role === 'user' && (
-                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center ml-2">
-                        <span className="text-gray-600 dark:text-gray-300 text-xs font-bold">
+                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center ml-2">
+                        <span className="text-gray-700 dark:text-gray-200 text-xs font-bold">
                           {userName.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -340,19 +340,19 @@ export function ChatbotWidget() {
               </div>
               
               {/* Formulário de entrada */}
-              <form onSubmit={handleSubmit} className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800">
+              <form onSubmit={handleSubmit} className="border-t border-gray-200 dark:border-gray-600 p-3 bg-gray-50 dark:bg-gray-700">
                 <div className="flex items-center space-x-2">
                   <input
                     type="text"
                     value={input}
                     onChange={handleInputChange}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 py-2 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 py-2 px-3 rounded-md border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400"
                     disabled={isLoading}
                   />
                   <button
                     type="submit"
-                    className="p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    className="p-2 rounded-md bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={!input.trim() || isLoading}
                   >
                     <Send size={18} />
@@ -369,7 +369,7 @@ export function ChatbotWidget() {
             setIsMinimized(false);
             setHasNewMessages(false);
           }}
-          className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg flex items-center justify-center relative transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full p-3 shadow-lg flex items-center justify-center relative transition-colors"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -386,7 +386,7 @@ export function ChatbotWidget() {
             />
           </svg>
           {hasNewMessages && (
-            <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-3 h-3 animate-pulse"></span>
+            <span className="absolute -top-1 -right-1 bg-red-600 rounded-full w-3 h-3 animate-pulse"></span>
           )}
         </button>
       )}
