@@ -14,6 +14,7 @@ import { getCourseAverageRating } from '@/services/firebase-ratings';
 import { StarRating } from '@/components/common/StarRating';
 import { RatingComments } from '@/components/courses/RatingComments';
 import { NewConversationButton } from '@/components/messages/NewConversationButton';
+import { toast } from 'react-hot-toast';
 
 interface CourseFields {
   title: string;
@@ -53,6 +54,7 @@ export default function CoursePage() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentChecking, setEnrollmentChecking] = useState(true);
   const [courseRating, setCourseRating] = useState({ average: 0, count: 0 });
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Função auxiliar para converter what_will_learn em array
   const getWhatWillLearn = (items?: string | string[]): string[] => {
@@ -157,11 +159,43 @@ export default function CoursePage() {
     setSelectedPaymentMethod(method);
   };
 
-  const handlePay = () => {
-    // In a real implementation, this would process the payment
-    // For now, we'll just close the modal and redirect to the course content
-    setShowPaymentModal(false);
-    router.push(`/learn/courses/${id}`);
+  const handlePay = async () => {
+    // Se não for um método PIX, segue o fluxo normal
+    if (!selectedPaymentMethod?.includes('pix')) {
+      setShowPaymentModal(false);
+      router.push(`/learn/courses/${id}`);
+      return;
+    }
+    
+    // Começar a processar o pagamento PIX
+    setIsProcessingPayment(true);
+    
+    try {
+      // Simular processamento de pagamento
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      // Criar a matrícula
+      if (user && course?.fields.professor_id) {
+        const { createEnrollment } = await import('@/services/firebase-enrollments');
+        await createEnrollment({
+          user_id: user.uid,
+          course_id: id as string,
+          professor_id: course.fields.professor_id
+        });
+      }
+      
+      // Atualizar o estado de matrícula e exibir mensagem de sucesso
+      setIsEnrolled(true);
+      toast.success('Pagamento processado com sucesso! Bem-vindo ao curso!');
+      
+      // Fechar o modal e redirecionar
+      setShowPaymentModal(false);
+      router.push(`/learn/courses/${id}`);
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
+      toast.error('Não foi possível processar o pagamento. Tente novamente.');
+      setIsProcessingPayment(false);
+    }
   };
 
   // Função para formatar as condições de pagamento
@@ -452,6 +486,7 @@ export default function CoursePage() {
               <button 
                 onClick={handleCloseModal}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                disabled={isProcessingPayment}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -459,154 +494,166 @@ export default function CoursePage() {
               </button>
             </div>
             
-            <div className="space-y-3 mb-6">
-              <div 
-                className={`p-3 border rounded-lg cursor-pointer ${
-                  selectedPaymentMethod === 'pix_subscription' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-gray-200 dark:border-gray-700'
-                }`}
-                onClick={() => handleSelectPaymentMethod('pix_subscription')}
-              >
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'pix_subscription' 
-                      ? 'border-blue-500' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}>
-                    {selectedPaymentMethod === 'pix_subscription' && (
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    )}
+            {isProcessingPayment ? (
+              <div className="py-10 flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500"></div>
+                <p className="mt-4 text-lg text-gray-700 dark:text-gray-300">Processando pagamento via PIX...</p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Aguarde enquanto confirmamos o pagamento</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 mb-6">
+                  {/* Opções de pagamento com PIX */}
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer ${
+                      selectedPaymentMethod === 'pix_subscription' 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    onClick={() => handleSelectPaymentMethod('pix_subscription')}
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        selectedPaymentMethod === 'pix_subscription' 
+                          ? 'border-blue-500' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {selectedPaymentMethod === 'pix_subscription' && (
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span className="font-medium">Assinar com PIX Recorrente</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span className="font-medium">Assinar com PIX Recorrente</span>
+                  
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer ${
+                      selectedPaymentMethod === 'pix_onetime' 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    onClick={() => handleSelectPaymentMethod('pix_onetime')}
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        selectedPaymentMethod === 'pix_onetime' 
+                          ? 'border-blue-500' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {selectedPaymentMethod === 'pix_onetime' && (
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span className="font-medium">Comprar à Vista com PIX</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer ${
+                      selectedPaymentMethod === 'pix_installment' 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    onClick={() => handleSelectPaymentMethod('pix_installment')}
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        selectedPaymentMethod === 'pix_installment' 
+                          ? 'border-blue-500' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {selectedPaymentMethod === 'pix_installment' && (
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span className="font-medium">Parcelar com PIX</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Outras opções de pagamento */}
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer ${
+                      selectedPaymentMethod === 'card_installment' 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    onClick={() => handleSelectPaymentMethod('card_installment')}
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        selectedPaymentMethod === 'card_installment' 
+                          ? 'border-blue-500' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {selectedPaymentMethod === 'card_installment' && (
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                        <span className="font-medium">Parcelar com Cartão</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer ${
+                      selectedPaymentMethod === 'card_onetime' 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                    onClick={() => handleSelectPaymentMethod('card_onetime')}
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        selectedPaymentMethod === 'card_onetime' 
+                          ? 'border-blue-500' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {selectedPaymentMethod === 'card_onetime' && (
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        <span className="font-medium">Pagar à Vista com Cartão</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div 
-                className={`p-3 border rounded-lg cursor-pointer ${
-                  selectedPaymentMethod === 'pix_onetime' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-gray-200 dark:border-gray-700'
-                }`}
-                onClick={() => handleSelectPaymentMethod('pix_onetime')}
-              >
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'pix_onetime' 
-                      ? 'border-blue-500' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}>
-                    {selectedPaymentMethod === 'pix_onetime' && (
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="font-medium">Comprar à Vista com PIX</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                className={`p-3 border rounded-lg cursor-pointer ${
-                  selectedPaymentMethod === 'pix_installment' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-gray-200 dark:border-gray-700'
-                }`}
-                onClick={() => handleSelectPaymentMethod('pix_installment')}
-              >
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'pix_installment' 
-                      ? 'border-blue-500' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}>
-                    {selectedPaymentMethod === 'pix_installment' && (
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    <span className="font-medium">Parcelar com PIX</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                className={`p-3 border rounded-lg cursor-pointer ${
-                  selectedPaymentMethod === 'card_installment' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-gray-200 dark:border-gray-700'
-                }`}
-                onClick={() => handleSelectPaymentMethod('card_installment')}
-              >
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'card_installment' 
-                      ? 'border-blue-500' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}>
-                    {selectedPaymentMethod === 'card_installment' && (
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium">Parcelar com Cartão</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                className={`p-3 border rounded-lg cursor-pointer ${
-                  selectedPaymentMethod === 'card_onetime' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-gray-200 dark:border-gray-700'
-                }`}
-                onClick={() => handleSelectPaymentMethod('card_onetime')}
-              >
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'card_onetime' 
-                      ? 'border-blue-500' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}>
-                    {selectedPaymentMethod === 'card_onetime' && (
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    <span className="font-medium">Pagar à Vista com Cartão</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <Button
-              onClick={handlePay}
-              disabled={!selectedPaymentMethod}
-              className={`w-full ${
-                selectedPaymentMethod 
-                  ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' 
-                  : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
-              }`}
-            >
-              Pagar
-            </Button>
+                
+                <Button
+                  onClick={handlePay}
+                  disabled={!selectedPaymentMethod}
+                  className={`w-full ${
+                    selectedPaymentMethod 
+                      ? 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600' 
+                      : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
+                  }`}
+                >
+                  {selectedPaymentMethod?.includes('pix') ? 'Pagar com PIX' : 'Pagar'}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -6,14 +6,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { getUserEnrollments, UserEnrollmentWithCourse } from '@/services/firebase-enrollments';
+import { getUserEnrollments, UserEnrollmentWithCourse, cancelEnrollment } from '@/services/firebase-enrollments';
 import { StarRating } from '@/components/common/StarRating';
+import { Button } from '@/components/common/Button';
 
 export default function EnrolledCoursesPage() {
   const router = useRouter();
   const { user, airtableUser } = useAuthContext();
   const [courses, setCourses] = useState<UserEnrollmentWithCourse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [cancelingCourse, setCancelingCourse] = useState<{id: string; courseId: string; name: string} | null>(null);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -27,26 +31,57 @@ export default function EnrolledCoursesPage() {
       return;
     }
 
-    const loadEnrollments = async () => {
-      try {
-        setLoading(true);
-        const enrollments = await getUserEnrollments(user.uid);
-        console.log('Cursos matriculados carregados:', enrollments);
-        // Verificando URLs das imagens
-        enrollments.forEach(enrollment => {
-          console.log(`Curso: ${enrollment.fields.courseName}, URL da imagem: ${enrollment.fields.courseImage}`);
-        });
-        setCourses(enrollments);
-      } catch (error) {
-        console.error('Erro ao carregar cursos matriculados:', error);
-        toast.error('Não foi possível carregar seus cursos. Tente novamente mais tarde.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadEnrollments();
   }, [user, airtableUser, router]);
+
+  const loadEnrollments = async () => {
+    try {
+      setLoading(true);
+      const enrollments = await getUserEnrollments(user?.uid || '');
+      console.log('Cursos matriculados carregados:', enrollments);
+      // Verificando URLs das imagens
+      enrollments.forEach(enrollment => {
+        console.log(`Curso: ${enrollment.fields.courseName}, URL da imagem: ${enrollment.fields.courseImage}`);
+      });
+      setCourses(enrollments);
+    } catch (error) {
+      console.error('Erro ao carregar cursos matriculados:', error);
+      toast.error('Não foi possível carregar seus cursos. Tente novamente mais tarde.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelClick = (enrollment: UserEnrollmentWithCourse) => {
+    setCancelingCourse({
+      id: enrollment.id,
+      courseId: enrollment.fields.course_id,
+      name: enrollment.fields.courseName
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleCancelEnrollment = async () => {
+    if (!cancelingCourse || !user) return;
+    
+    setIsCanceling(true);
+    try {
+      await cancelEnrollment(user.uid, cancelingCourse.courseId);
+      toast.success('Matrícula cancelada com sucesso!');
+      
+      // Atualizar a lista de cursos
+      setCourses(previous => previous.filter(course => course.id !== cancelingCourse.id));
+      
+      // Fechar o modal
+      setShowConfirmModal(false);
+      setCancelingCourse(null);
+    } catch (error) {
+      console.error('Erro ao cancelar matrícula:', error);
+      toast.error('Não foi possível cancelar a matrícula. Tente novamente.');
+    } finally {
+      setIsCanceling(false);
+    }
+  };
 
   return (
     <div className="p-6">
@@ -133,25 +168,65 @@ export default function EnrolledCoursesPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${
-                      enrollment.fields.status === 'completed' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                    }`}>
-                      {enrollment.fields.status === 'completed' ? 'Concluído' : 'Em andamento'}
-                    </span>
-                    <Link
-                      href={`/learn/courses/${enrollment.fields.course_id}`}
-                      className="text-blue-600 hover:underline dark:text-blue-400"
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${
+                        enrollment.fields.status === 'completed' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                      }`}>
+                        {enrollment.fields.status === 'completed' ? 'Concluído' : 'Em andamento'}
+                      </span>
+                      <Link
+                        href={`/learn/courses/${enrollment.fields.course_id}`}
+                        className="text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Continuar
+                      </Link>
+                    </div>
+                    
+                    {/* Botão para cancelar matrícula */}
+                    <button
+                      onClick={() => handleCancelClick(enrollment)}
+                      className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-center"
                     >
-                      Continuar
-                    </Link>
+                      Cancelar matrícula
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal de confirmação */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Confirmar cancelamento
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Tem certeza que deseja cancelar sua matrícula no curso <span className="font-medium">{cancelingCourse?.name}</span>? Esta ação não poderá ser desfeita.
+            </p>
+            <div className="flex gap-4 justify-end">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                disabled={isCanceling}
+              >
+                Não, manter matrícula
+              </button>
+              <Button
+                onClick={handleCancelEnrollment}
+                isLoading={isCanceling}
+                className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+              >
+                Sim, cancelar matrícula
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

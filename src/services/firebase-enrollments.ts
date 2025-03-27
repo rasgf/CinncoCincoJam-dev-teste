@@ -1,4 +1,4 @@
-import { getDatabase, ref, set, get, query, orderByChild, equalTo, push } from 'firebase/database';
+import { getDatabase, ref, set, get, query, orderByChild, equalTo, push, update } from 'firebase/database';
 import { collections } from './firebase';
 
 const db = getDatabase();
@@ -370,6 +370,56 @@ export const getUserEnrollments = async (userId: string): Promise<UserEnrollment
     });
   } catch (error) {
     console.error('Erro ao buscar matrículas do usuário:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancela a matrícula de um usuário em um curso específico
+ * @param userId - ID do usuário
+ * @param courseId - ID do curso
+ * @returns true se a matrícula foi cancelada com sucesso
+ */
+export const cancelEnrollment = async (userId: string, courseId: string) => {
+  try {
+    // Buscar todas as matrículas do usuário
+    const enrollmentsRef = ref(db, collections.enrollments);
+    const userQuery = query(
+      enrollmentsRef, 
+      orderByChild('user_id'), 
+      equalTo(userId)
+    );
+    
+    const snapshot = await get(userQuery);
+    
+    if (!snapshot.exists()) {
+      throw new Error('Nenhuma matrícula encontrada para este usuário');
+    }
+    
+    let enrollmentId: string | null = null;
+    
+    // Encontrar a matrícula específica para este curso
+    snapshot.forEach((childSnapshot) => {
+      const enrollment = childSnapshot.val();
+      if (enrollment.course_id === courseId) {
+        enrollmentId = childSnapshot.key;
+      }
+    });
+    
+    if (!enrollmentId) {
+      throw new Error('Matrícula não encontrada para este curso');
+    }
+    
+    // Atualizar o status da matrícula para 'cancelled'
+    const enrollmentRef = ref(db, `${collections.enrollments}/${enrollmentId}`);
+    await update(enrollmentRef, {
+      status: 'cancelled',
+      updated_at: new Date().toISOString()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao cancelar matrícula:', error);
     throw error;
   }
 }; 
