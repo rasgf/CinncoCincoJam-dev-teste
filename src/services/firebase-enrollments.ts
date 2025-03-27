@@ -55,7 +55,7 @@ export const checkEnrollment = async (userId: string, courseId: string) => {
     
     snapshot.forEach((childSnapshot) => {
       const enrollment = childSnapshot.val();
-      if (enrollment.course_id === courseId && enrollment.status === 'active') {
+      if (enrollment.course_id === courseId && enrollment.status !== 'cancelled') {
         hasEnrollment = true;
       }
     });
@@ -294,14 +294,22 @@ export const getUserEnrollments = async (userId: string): Promise<UserEnrollment
       const enrollmentData = childSnapshot.val();
       const enrollmentId = childSnapshot.key as string;
       
-      enrollments.push({
-        id: enrollmentId,
-        fields: enrollmentData
-      });
-      
-      courseIds.add(enrollmentData.course_id);
-      professorIds.add(enrollmentData.professor_id);
+      // Filtrar apenas matrículas ativas ou completadas, ignorando canceladas
+      if (enrollmentData.status !== 'cancelled') {
+        enrollments.push({
+          id: enrollmentId,
+          fields: enrollmentData
+        });
+        
+        courseIds.add(enrollmentData.course_id);
+        professorIds.add(enrollmentData.professor_id);
+      }
     });
+    
+    // Se todas as matrículas foram filtradas, retorne um array vazio
+    if (enrollments.length === 0) {
+      return [];
+    }
     
     // Buscar dados dos cursos e professores
     const [coursesSnapshot, usersSnapshot] = await Promise.all([
