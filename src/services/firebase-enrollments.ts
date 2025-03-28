@@ -272,6 +272,8 @@ export interface UserEnrollmentWithCourse {
     professorName: string;
     rating?: number;
     ratingCount?: number;
+    releaseDate?: string;
+    releaseTime?: string;
   };
 }
 
@@ -372,7 +374,9 @@ export const getUserEnrollments = async (userId: string): Promise<UserEnrollment
           courseImage,
           professorName: professor.name || 'Professor não encontrado',
           rating: ratings.rating,
-          ratingCount: ratings.count
+          ratingCount: ratings.count,
+          releaseDate: course.releaseDate,
+          releaseTime: course.releaseTime
         }
       };
     });

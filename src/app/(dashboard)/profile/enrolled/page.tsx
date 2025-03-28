@@ -194,6 +194,38 @@ export default function EnrolledCoursesPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Verificar se o curso ainda não foi liberado */}
+                {enrollment.fields.releaseDate && (
+                  (() => {
+                    // Verificar se a data de lançamento é válida e está no futuro
+                    const releaseDate = new Date(`${enrollment.fields.releaseDate}T${enrollment.fields.releaseTime || '00:00'}`);
+                    const now = new Date();
+                    
+                    if (!isNaN(releaseDate.getTime()) && now < releaseDate) {
+                      return (
+                        <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-sm rounded-md">
+                          <div className="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>
+                              Será liberado em {releaseDate.toLocaleDateString('pt-BR', { 
+                                day: '2-digit', 
+                                month: '2-digit', 
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return null;
+                  })()
+                )}
               </div>
             </div>
           ))}

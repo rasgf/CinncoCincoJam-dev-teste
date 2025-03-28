@@ -184,11 +184,36 @@ export default function CoursePage() {
         });
       }
       
-      // Atualizar o estado de matrícula e exibir mensagem de sucesso
+      // Atualizar o estado de matrícula
       setIsEnrolled(true);
-      toast.success('Pagamento processado com sucesso! Bem-vindo ao curso!');
       
-      // Fechar o modal e redirecionar
+      // Verificar se o curso tem data de liberação futura
+      if (course?.fields.releaseDate && course.fields.releaseTime) {
+        const releaseDateTime = new Date(`${course.fields.releaseDate}T${course.fields.releaseTime || '00:00'}`);
+        const now = new Date();
+        
+        if (now < releaseDateTime) {
+          // Curso ainda não liberado
+          const formattedDate = releaseDateTime.toLocaleDateString('pt-BR', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit' 
+          });
+          
+          toast.success('Pagamento processado com sucesso! Você está matriculado no curso.');
+          toast.info(`O curso será liberado em ${formattedDate}. Você receberá uma notificação quando estiver disponível.`);
+          
+          // Fechar o modal e redirecionar para a página do curso
+          setShowPaymentModal(false);
+          router.push(`/courses/${id}`);
+          return;
+        }
+      }
+      
+      // Se o curso já está liberado, exibe mensagem de sucesso e redireciona
+      toast.success('Pagamento processado com sucesso! Bem-vindo ao curso!');
       setShowPaymentModal(false);
       router.push(`/learn/courses/${id}`);
     } catch (error) {

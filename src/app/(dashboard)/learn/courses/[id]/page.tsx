@@ -79,14 +79,15 @@ export default function CoursePlayerPage() {
             // Se a data atual for anterior à data de lançamento, não permitir acesso
             if (now < releaseDateTime) {
               setHasAccess(false);
+              const formattedDate = releaseDateTime.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit' 
+              });
               setVideoError({
-                message: `Este curso será liberado em ${releaseDateTime.toLocaleDateString('pt-BR', { 
-                  day: '2-digit', 
-                  month: '2-digit', 
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit' 
-                })}`
+                message: `Este curso será liberado em ${formattedDate}. Você já está matriculado e terá acesso automático quando o curso for liberado.`
               });
               setAccessChecking(false);
               setLoading(false);
@@ -253,11 +254,24 @@ export default function CoursePlayerPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            Acesso Não Autorizado
+            {videoError ? 'Curso Bloqueado' : 'Acesso Não Autorizado'}
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            Você não tem acesso a este curso. Para acessar o conteúdo, você precisa estar matriculado.
-          </p>
+          
+          {videoError ? (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-yellow-500 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                {videoError.message}
+              </p>
+            </>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Você não tem acesso a este curso. Para acessar o conteúdo, você precisa estar matriculado.
+            </p>
+          )}
+          
           <div className="flex justify-center gap-4">
             <Button
               onClick={() => router.push('/courses')}
@@ -270,7 +284,7 @@ export default function CoursePlayerPage() {
               variant="outline"
               className="w-auto"
             >
-              Saiba Mais Sobre Este Curso
+              {videoError ? 'Detalhes do Curso' : 'Saiba Mais Sobre Este Curso'}
             </Button>
           </div>
         </div>
@@ -326,11 +340,21 @@ export default function CoursePlayerPage() {
                     <div className="flex justify-between items-center">
                       <h3 className="font-medium">{video.title}</h3>
                       {video.isLocked && (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                        </svg>
+                        <div className="relative group">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                          <div className="absolute right-0 bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded px-2 py-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {video.lockedMessage}
+                          </div>
+                        </div>
                       )}
                     </div>
+                    {video.isLocked && (
+                      <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        {video.lockedMessage}
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
