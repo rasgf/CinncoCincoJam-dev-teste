@@ -14,7 +14,8 @@ export const collections = {
   lesson_progress: 'lesson_progress',
   course_contents: 'courseContents',
   conversations: 'conversations',
-  messages: 'messages'
+  messages: 'messages',
+  studio_sessions: 'studio_sessions'
 };
 
 // Criar um usuário no Firebase

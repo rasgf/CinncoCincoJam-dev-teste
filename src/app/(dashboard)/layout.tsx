@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { SunIcon, MoonIcon, InformationCircleIcon, UserCircleIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { SunIcon, MoonIcon, InformationCircleIcon, UserCircleIcon, EnvelopeIcon, HomeIcon, UserIcon, BookOpenIcon, MusicalNoteIcon, ClockIcon, KeyIcon } from '@heroicons/react/24/outline';
 import { FullScreenLoading } from '@/components/common/Loading';
 import { ChatbotWidget } from '@/components/chatbot/ChatbotWidget';
 import { PasswordModal } from '@/components/admin/PasswordModal';
 import { ConfigModal } from '@/components/admin/ConfigModal';
 import { Toaster } from 'react-hot-toast';
 import { getUnreadMessageCount } from '@/services/firebase-messages';
+import GlobalSessionAlert from '@/components/studio-sessions/GlobalSessionAlert';
 
 export default function DashboardLayout({
   children,
@@ -109,17 +110,52 @@ export default function DashboardLayout({
     return <FullScreenLoading />;
   }
 
-  const menuItems = [
+  const MENU_ITEMS = [
     {
-      label: 'Meu Perfil',
-      path: '/profile',
-      icon: UserCircleIcon,
-      message: 'Você já está no seu perfil!',
+      title: 'Dashboard',
+      href: '/dashboard',
+      icon: HomeIcon,
+      allowedRoles: ['admin', 'professor', 'aluno']
     },
-    { href: '/courses', label: 'Cursos' },
-    { href: '/messages', label: 'Mensagens', badge: unreadMessages > 0 ? unreadMessages : null },
-    { href: '/apps-pro', label: 'Apps PRO' },
+    {
+      title: 'Perfil',
+      href: '/profile',
+      icon: UserIcon,
+      allowedRoles: ['admin', 'professor', 'aluno']
+    },
+    {
+      title: 'Cursos',
+      href: '/courses',
+      icon: BookOpenIcon,
+      allowedRoles: ['admin', 'professor', 'aluno']
+    },
+    {
+      title: 'Mensagens',
+      href: '/messages',
+      icon: EnvelopeIcon,
+      allowedRoles: ['admin', 'professor', 'aluno']
+    },
+    {
+      title: 'Estúdios',
+      href: '/studio-sessions',
+      icon: MusicalNoteIcon,
+      allowedRoles: ['admin', 'professor']
+    },
+    {
+      title: 'Minhas Sessões',
+      href: '/studio-sessions/minhas-sessoes',
+      icon: ClockIcon,
+      allowedRoles: ['professor']
+    },
+    {
+      title: 'Administração',
+      href: '/admin',
+      icon: KeyIcon,
+      allowedRoles: ['admin']
+    }
   ];
+
+  const filteredMenuItems = MENU_ITEMS.filter(item => item.allowedRoles.includes(firebaseUser?.fields.role));
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -133,19 +169,14 @@ export default function DashboardLayout({
                 </Link>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                {menuItems.map((item) => (
+                {filteredMenuItems.map((item) => (
                   <Link
-                    key={item.path || item.href}
-                    href={item.path || item.href}
-                    onClick={(e) => item.path === '/profile' && handleProfileClick(e, item.path)}
+                    key={item.href}
+                    href={item.href}
+                    onClick={(e) => item.href === '/profile' && handleProfileClick(e, item.href)}
                     className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-gray-100 border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 relative"
                   >
-                    {item.label}
-                    {item.badge && (
-                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
+                    {item.title}
                   </Link>
                 ))}
               </div>
@@ -211,14 +242,14 @@ export default function DashboardLayout({
                   {firebaseUser?.fields.name}
                 </span>
 
-                {menuItems.map((item) => (
+                {filteredMenuItems.map((item) => (
                   <Link
-                    key={item.path || item.href}
-                    href={item.path || item.href}
-                    onClick={(e) => item.path === '/profile' && handleProfileClick(e, item.path)}
+                    key={item.href}
+                    href={item.href}
+                    onClick={(e) => item.href === '/profile' && handleProfileClick(e, item.href)}
                     className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
-                    {item.label}
+                    {item.title}
                   </Link>
                 ))}
                 {isAdmin && (
@@ -302,6 +333,11 @@ export default function DashboardLayout({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Alerta de sessões pendentes - mostra apenas para alunos */}
+      {user && firebaseUser?.fields?.role === 'aluno' && (
+        <GlobalSessionAlert studentId={user.uid} />
       )}
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 mt-16 dark:text-gray-200">

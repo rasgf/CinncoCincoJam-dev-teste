@@ -24,6 +24,7 @@ import { deleteUser as deleteFirebaseUser } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import Image from 'next/image';
+import StudentSessionsList from '@/components/studio-sessions/StudentSessionsList';
 
 const getRoleDisplay = (role: string) => {
   switch (role) {
@@ -431,263 +432,267 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">
-          Meu Perfil
-        </h1>
+      <div className="mb-6">
+        <nav className="flex" aria-label="Breadcrumb">
+          <ol className="inline-flex items-center space-x-1 md:space-x-3">
+            <li className="inline-flex items-center">
+              <Link href="/dashboard" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white">
+                <svg className="w-3 h-3 mr-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z"/>
+                </svg>
+                Dashboard
+              </Link>
+            </li>
+            <li aria-current="page">
+              <div className="flex items-center">
+                <svg className="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4"/>
+                </svg>
+                <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Meu Perfil</span>
+              </div>
+            </li>
+          </ol>
+        </nav>
+      </div>
 
-        {isProfessorPending && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <h3 className="text-lg font-medium text-yellow-800 dark:text-yellow-300 mb-2">
-              Solicitação de Professor Pendente
-            </h3>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              Sua solicitação para se tornar um professor está em análise. Você será notificado assim que for aprovada.
-            </p>
-          </div>
-        )}
-
-        {isTeacher && !isProfessorPending && !isProfessorActive && (
-          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <h3 className="text-lg font-medium text-blue-800 dark:text-blue-300 mb-2">
-              Ative seu Perfil de Professor
-            </h3>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-              Seu perfil está configurado como professor, mas você ainda não tem um registro ativo. Solicite a aprovação para acessar todas as funcionalidades de professor.
-            </p>
-            <Button 
-              onClick={handleRequestApproval} 
-              isLoading={isRequestingApproval}
-              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-            >
-              Solicitar Aprovação
-            </Button>
-          </div>
-        )}
-
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Informações Pessoais</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                Foto de Perfil
-              </h2>
-              <div className="flex flex-col items-center">
-                <div className="relative w-32 h-32 mb-4">
-                  <ImageUpload
-                    currentImage={firebaseUser?.fields.profile_image}
-                    onImageSelect={handleImageSelect}
-                    className="w-32 h-32 rounded-full object-cover"
-                  />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                  Clique na imagem para alterar sua foto de perfil
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Meu Perfil</h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Gerencie suas informações pessoais
                 </p>
               </div>
             </div>
-          </div>
 
-          <div className="md:col-span-2 space-y-6">
-            {error && (
-              <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
-            
-            {success && (
-              <div className="bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-200 px-4 py-3 rounded-lg">
-                {success}
+            {isProfessorPending && (
+              <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <h3 className="text-lg font-medium text-yellow-800 dark:text-yellow-300 mb-2">
+                  Solicitação de Professor Pendente
+                </h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Sua solicitação para se tornar um professor está em análise. Você será notificado assim que for aprovada.
+                </p>
               </div>
             )}
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6">
-                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
-                  Informações Pessoais
-                </h2>
+            {isTeacher && !isProfessorPending && !isProfessorActive && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h3 className="text-lg font-medium text-blue-800 dark:text-blue-300 mb-2">
+                  Ative seu Perfil de Professor
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                  Seu perfil está configurado como professor, mas você ainda não tem um registro ativo. Solicite a aprovação para acessar todas as funcionalidades de professor.
+                </p>
+                <Button 
+                  onClick={handleRequestApproval} 
+                  isLoading={isRequestingApproval}
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                >
+                  Solicitar Aprovação
+                </Button>
+              </div>
+            )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-6">
-                    <div className="flex items-center space-x-3">
-                      <UserIcon className="h-5 w-5 text-gray-400" />
-                      <Input
-                        label="Nome completo"
-                        name="name"
-                        type="text"
-                        value={formData.name}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <UserIcon className="h-5 w-5 text-gray-400" />
+                  <Input
+                    label="Nome completo"
+                    name="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                  <Input
+                    label="Email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    disabled
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <AcademicCapIcon className="h-5 w-5 text-gray-400" />
+                  <Input
+                    label="Tipo de usuário"
+                    name="role"
+                    type="text"
+                    value={getRoleDisplay(formData.role)}
+                    disabled
+                    required
+                  />
+                </div>
+
+                {isTeacher && isProfessorActive && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                        Biografia
+                      </label>
+                      <textarea
+                        name="bio"
+                        rows={4}
+                        value={formData.bio}
                         onChange={handleChange}
-                        required
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
                       />
                     </div>
-
-                    <div className="flex items-center space-x-3">
-                      <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-                      <Input
-                        label="Email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        disabled
-                        required
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <AcademicCapIcon className="h-5 w-5 text-gray-400" />
-                      <Input
-                        label="Tipo de usuário"
-                        name="role"
-                        type="text"
-                        value={getRoleDisplay(formData.role)}
-                        disabled
-                        required
-                      />
-                    </div>
-
-                    {isTeacher && isProfessorActive && (
-                      <>
-                        <div className="space-y-1">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                            Biografia
-                          </label>
-                          <textarea
-                            name="bio"
-                            rows={4}
-                            value={formData.bio}
+                    
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                        Dados Bancários para Recebimentos
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <BuildingLibraryIcon className="h-5 w-5 text-gray-400" />
+                          <Input
+                            label="Nome do Banco"
+                            name="bank_name"
+                            type="text"
+                            value={formData.bank_name}
                             onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
+                            placeholder="Ex: Banco do Brasil, Nubank, etc."
                           />
                         </div>
                         
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                            Dados Bancários para Recebimentos
-                          </h3>
-                          
-                          <div className="space-y-4">
-                            <div className="flex items-center space-x-3">
-                              <BuildingLibraryIcon className="h-5 w-5 text-gray-400" />
-                              <Input
-                                label="Nome do Banco"
-                                name="bank_name"
-                                type="text"
-                                value={formData.bank_name}
-                                onChange={handleChange}
-                                placeholder="Ex: Banco do Brasil, Nubank, etc."
-                              />
-                            </div>
-                            
-                            <div className="flex items-center space-x-3">
-                              <BanknotesIcon className="h-5 w-5 text-gray-400" />
-                              <div className="grid grid-cols-2 gap-4 w-full">
-                                <Input
-                                  label="Agência"
-                                  name="bank_branch"
-                                  type="text"
-                                  value={formData.bank_branch}
-                                  onChange={handleChange}
-                                  placeholder="Sem dígito"
-                                />
-                                <Input
-                                  label="Conta"
-                                  name="bank_account"
-                                  type="text"
-                                  value={formData.bank_account}
-                                  onChange={handleChange}
-                                  placeholder="Com dígito"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center space-x-3">
-                              <div className="h-5 w-5" />
-                              <div className="w-full">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                  Tipo de Conta
-                                </label>
-                                <select
-                                  name="bank_account_type"
-                                  value={formData.bank_account_type}
-                                  onChange={handleChange}
-                                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
-                                >
-                                  <option value="checking">Conta Corrente</option>
-                                  <option value="savings">Conta Poupança</option>
-                                  <option value="payment">Conta de Pagamento</option>
-                                </select>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center space-x-3">
-                              <IdentificationIcon className="h-5 w-5 text-gray-400" />
-                              <Input
-                                label="CPF/CNPJ"
-                                name="bank_document"
-                                type="text"
-                                value={formData.bank_document}
-                                onChange={handleChange}
-                                placeholder="Apenas números"
-                              />
-                            </div>
-                            
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                              Estes dados serão utilizados apenas para processamento de pagamentos.
-                              Suas informações bancárias são armazenadas de forma segura.
-                            </p>
+                        <div className="flex items-center space-x-3">
+                          <BanknotesIcon className="h-5 w-5 text-gray-400" />
+                          <div className="grid grid-cols-2 gap-4 w-full">
+                            <Input
+                              label="Agência"
+                              name="bank_branch"
+                              type="text"
+                              value={formData.bank_branch}
+                              onChange={handleChange}
+                              placeholder="Sem dígito"
+                            />
+                            <Input
+                              label="Conta"
+                              name="bank_account"
+                              type="text"
+                              value={formData.bank_account}
+                              onChange={handleChange}
+                              placeholder="Com dígito"
+                            />
                           </div>
                         </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex justify-end">
-                      <Button type="submit" isLoading={isLoading}>
-                        Salvar alterações
-                      </Button>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="h-5 w-5" />
+                          <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                              Tipo de Conta
+                            </label>
+                            <select
+                              name="bank_account_type"
+                              value={formData.bank_account_type}
+                              onChange={handleChange}
+                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
+                            >
+                              <option value="checking">Conta Corrente</option>
+                              <option value="savings">Conta Poupança</option>
+                              <option value="payment">Conta de Pagamento</option>
+                            </select>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <IdentificationIcon className="h-5 w-5 text-gray-400" />
+                          <Input
+                            label="CPF/CNPJ"
+                            name="bank_document"
+                            type="text"
+                            value={formData.bank_document}
+                            onChange={handleChange}
+                            placeholder="Apenas números"
+                          />
+                        </div>
+                        
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                          Estes dados serão utilizados apenas para processamento de pagamentos.
+                          Suas informações bancárias são armazenadas de forma segura.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </form>
+                  </>
+                )}
               </div>
-            </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-6">
-                <h2 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4">
-                  Zona de Perigo
-                </h2>
-                
-                <div className="border-l-4 border-yellow-500 pl-4 py-2 mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Altere sua senha regularmente para manter sua conta segura.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleChangePassword}
-                    className="!bg-yellow-50 dark:!bg-yellow-900/50 !text-yellow-600 dark:!text-yellow-400 hover:!bg-yellow-100 dark:hover:!bg-yellow-900/70"
-                  >
-                    Alterar senha
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end">
+                  <Button type="submit" isLoading={isLoading}>
+                    Salvar alterações
                   </Button>
                 </div>
-                
-                <div className="border-l-4 border-red-500 pl-4 py-2">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Uma vez deletada, sua conta não poderá ser recuperada. Por favor, tenha certeza.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleDeleteAccount}
-                    isLoading={isDeleting}
-                    className="!bg-red-50 dark:!bg-red-900/50 !text-red-600 dark:!text-red-400 hover:!bg-red-100 dark:hover:!bg-red-900/70"
-                  >
-                    Deletar minha conta
-                  </Button>
-                </div>
+              </div>
+            </form>
+          </div>
+
+          {firebaseUser?.fields?.role === 'aluno' && user?.uid && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+              <StudentSessionsList studentId={user.uid} />
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-200 px-4 py-3 rounded-lg">
+              {success}
+            </div>
+          )}
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-6">
+              <h2 className="text-lg font-medium text-red-600 dark:text-red-400 mb-4">
+                Zona de Perigo
+              </h2>
+              
+              <div className="border-l-4 border-yellow-500 pl-4 py-2 mb-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Altere sua senha regularmente para manter sua conta segura.
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleChangePassword}
+                  className="!bg-yellow-50 dark:!bg-yellow-900/50 !text-yellow-600 dark:!text-yellow-400 hover:!bg-yellow-100 dark:hover:!bg-yellow-900/70"
+                >
+                  Alterar senha
+                </Button>
+              </div>
+              
+              <div className="border-l-4 border-red-500 pl-4 py-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Uma vez deletada, sua conta não poderá ser recuperada. Por favor, tenha certeza.
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleDeleteAccount}
+                  isLoading={isDeleting}
+                  className="!bg-red-50 dark:!bg-red-900/50 !text-red-600 dark:!text-red-400 hover:!bg-red-100 dark:hover:!bg-red-900/70"
+                >
+                  Deletar minha conta
+                </Button>
               </div>
             </div>
           </div>

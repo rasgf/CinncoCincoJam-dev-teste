@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Button } from '@/components/common/Button';
 import { getAdminStats } from '@/services/firebase-admin';
-import { UsersIcon, BookOpenIcon, CurrencyDollarIcon, AcademicCapIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { UsersIcon, BookOpenIcon, CurrencyDollarIcon, AcademicCapIcon, ChartBarIcon, UserGroupIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface AdminStats {
   totalUsers: number;
@@ -211,8 +211,40 @@ export default function AdminDashboardPage() {
                 </span>
               </Button>
             </Link>
+            
+            <Link href="/admin/limpar-sessoes" className="block">
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800"
+              >
+                <span className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                  Limpar Sessões de Teste
+                </span>
+              </Button>
+            </Link>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <AdminCard
+          title="Gerenciar Usuários"
+          icon={<UserGroupIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />}
+          description="Visualize e gerencie todos os usuários do sistema."
+          linkText="Gerenciar Usuários"
+          href="/admin/users"
+        />
+        
+        <AdminCard
+          title="Limpar Sessões"
+          icon={<TrashIcon className="h-8 w-8 text-red-600 dark:text-red-400" />}
+          description="Limpe todas as sessões de estúdio ou atualize sessões antigas."
+          linkText="Manutenção de Sessões"
+          href="/admin/limpar-sessoes"
+        />
       </div>
     </div>
   );
